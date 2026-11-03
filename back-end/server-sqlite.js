@@ -4,10 +4,9 @@ const path = require("node:path");
 const fs = require("node:fs");
 
 /* ============================================
-   LOAD ENVIRONMENT VARIABLES
+   ENVIRONMENT VARIABLES
    ============================================ */
 
-// Load .env from the project root.
 require("dotenv").config({
   path: path.resolve(__dirname, "../.env"),
 });
@@ -28,7 +27,7 @@ if (
   /^(replace|your[-_]|changeme)/i.test(process.env.JWT_SECRET)
 ) {
   throw new Error(
-    "JWT_SECRET must be a strong secret of " + "at least 32 characters.",
+    "JWT_SECRET must be a strong secret " + "of at least 32 characters.",
   );
 }
 
@@ -52,7 +51,6 @@ const databasePath = process.env.SQLITE_DB_PATH
   ? path.resolve(process.env.SQLITE_DB_PATH)
   : path.resolve(__dirname, "data", "dental_offline.db");
 
-// Open SQLite before registering API routes.
 initializeSQLite(databasePath);
 
 /* ============================================
@@ -60,13 +58,21 @@ initializeSQLite(databasePath);
    ============================================ */
 
 const authRoutes = require("./routes/authRoutes");
+
 const patientRoutes = require("./routes/patientRoutes");
+
 const queueRoutes = require("./routes/queueRoutes");
+
 const appointmentRoutes = require("./routes/appointmentRoutes");
+
 const visitRoutes = require("./routes/visitRoutes");
+
 const dentalChartRoutes = require("./routes/dentalChartRoutes");
+
 const paymentRoutes = require("./routes/paymentRoutes");
+
 const dashboardRoutes = require("./routes/dashboardRoutes");
+
 const reportRoutes = require("./routes/reportRoutes");
 
 /* ============================================
@@ -117,11 +123,11 @@ app.use(
 );
 
 /* ============================================
-   PREVENT PRIVATE RESPONSE CACHING
+   PRIVATE RESPONSE CACHING
    ============================================ */
 
 app.use((req, res, next) => {
-  if (req.headers.authorization) {
+  if (req.headers.authorization || req.path.startsWith("/patient-images/")) {
     res.set("Cache-Control", "no-store");
   }
 
@@ -146,7 +152,7 @@ app.use(
 );
 
 /* ============================================
-   PRIVATE IMAGE RESPONSE MASKING
+   PRIVATE IMAGE MASKING
    ============================================ */
 
 app.use((req, res, next) => {
@@ -176,7 +182,9 @@ app.get("/health/ready", (req, res) => {
 
     db.prepare("SELECT id FROM users LIMIT 1").get();
 
-    db.prepare("SELECT bucket_key FROM security_rate_limits LIMIT 1").get();
+    db.prepare(
+      "SELECT bucket_key " + "FROM security_rate_limits LIMIT 1",
+    ).get();
 
     return res.json({
       status: "ready",
@@ -208,8 +216,6 @@ app.use("/uploads", (req, res) => {
    SQLITE API ROUTES
    ============================================ */
 
-// Register each route module only once.
-
 app.use("/", authRoutes);
 
 app.use("/", patientRoutes);
@@ -233,17 +239,19 @@ app.use("/", reportRoutes);
    ============================================ */
 
 if (SERVE_BUILT_UI) {
-  // Validate the compiled frontend.
   if (!fs.existsSync(FRONTEND_INDEX)) {
     throw new Error(
-      "React production build is missing.\n" +
+      "React production build is missing. " +
         "Run npm run build:ui:desktop first.",
     );
   }
 
   console.log("Serving compiled React frontend:", FRONTEND_DIST);
 
-  // Serve only files inside front-end/dist.
+  /* ------------------------------------------
+     STATIC FILES
+     ------------------------------------------ */
+
   app.use(
     express.static(FRONTEND_DIST, {
       index: false,
@@ -252,9 +260,10 @@ if (SERVE_BUILT_UI) {
     }),
   );
 
-  // React Router fallback.
-  // This lets client-side pages load when
-  // refreshing or navigating directly to a URL.
+  /* ------------------------------------------
+     REACT ROUTER FALLBACK
+     ------------------------------------------ */
+
   app.use((req, res, next) => {
     if (req.method !== "GET" && req.method !== "HEAD") {
       return next();
@@ -262,8 +271,6 @@ if (SERVE_BUILT_UI) {
 
     const requestPath = req.path;
 
-    // Do not turn missing API routes or
-    // protected resources into React HTML.
     const excludedPrefixes = [
       "/health",
       "/patient-images",
@@ -281,12 +288,10 @@ if (SERVE_BUILT_UI) {
       return next();
     }
 
-    // File requests must not receive index.html.
     if (path.posix.extname(requestPath)) {
       return next();
     }
 
-    // Only handle browser page navigation.
     if (!req.accepts("html")) {
       return next();
     }
@@ -296,10 +301,6 @@ if (SERVE_BUILT_UI) {
     return res.sendFile(FRONTEND_INDEX);
   });
 } else {
-  /* ==========================================
-     DEVELOPMENT API STATUS
-     ========================================== */
-
   app.get("/", (req, res) => {
     return res.send("Magno Dental Clinic SQLite API is running.");
   });
@@ -340,11 +341,9 @@ app.use((err, req, res, next) => {
 });
 
 /* ============================================
-   START LOCAL SQLITE BACKEND
+   START SQLITE BACKEND
    ============================================ */
 
-// Bind to loopback only.
-// Do not expose the clinic API to the LAN.
 const server = app.listen(PORT, "127.0.0.1", () => {
   console.log(`SQLite backend running at ` + `http://127.0.0.1:${PORT}`);
 
@@ -377,7 +376,6 @@ const maintenance = setInterval(
     try {
       const db = getSQLite();
 
-      // Delete expired authentication sessions.
       db.prepare(
         `
       DELETE FROM auth_sessions
@@ -385,7 +383,6 @@ const maintenance = setInterval(
     `,
       ).run(new Date().toISOString());
 
-      // Delete old rate-limit records.
       db.prepare(
         `
       DELETE FROM security_rate_limits
@@ -412,7 +409,7 @@ function shutdown(signal) {
 
   shuttingDown = true;
 
-  console.log(`Received ${signal}. Closing SQLite backend...`);
+  console.log(`Received ${signal}. ` + "Closing SQLite backend...");
 
   clearInterval(maintenance);
 

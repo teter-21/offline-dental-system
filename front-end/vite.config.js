@@ -10,9 +10,9 @@ export default defineConfig(({ mode }) => {
   const isDesktop = mode === "desktop";
 
   return {
-    // Relative assets are required when Electron
-    // loads the built index.html using file://.
-    base: isDesktop ? "./" : "/",
+    // The compiled frontend is served at
+    // http://127.0.0.1:3001 by Express.
+    base: "/",
 
     plugins: [
       react(),
@@ -33,18 +33,17 @@ export default defineConfig(({ mode }) => {
           const secureRemote = api.protocol === "https:";
 
           const localDesktop =
-            isDesktop &&
             api.protocol === "http:" &&
             api.hostname === "127.0.0.1" &&
             api.port === "3001";
 
           if (
-            (!secureRemote && !localDesktop) ||
             api.username ||
             api.password ||
             api.pathname !== "/" ||
             api.search ||
-            api.hash
+            api.hash ||
+            (isDesktop ? !localDesktop : !secureRemote)
           ) {
             throw new Error(
               isDesktop
@@ -53,20 +52,14 @@ export default defineConfig(({ mode }) => {
             );
           }
 
-          // Desktop builds accept ONLY the local backend.
-          if (isDesktop && !localDesktop) {
-            throw new Error(
-              "The desktop build must use http://127.0.0.1:3001.",
-            );
-          }
-
           const policy = [
             "default-src 'self'",
             "script-src 'self'",
             "style-src 'self' 'unsafe-inline'",
-            `img-src 'self' blob: data: ${api.origin}`,
+            "img-src 'self' blob: data:",
             "font-src 'self' data:",
             `connect-src 'self' ${api.origin}`,
+            "media-src 'self' blob:",
             "frame-src https://www.google.com",
             "object-src 'none'",
             "base-uri 'self'",
