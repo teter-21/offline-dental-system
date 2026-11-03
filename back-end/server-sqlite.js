@@ -1,7 +1,13 @@
-const path = require("node:path");
+"use strict";
 
-// Load .env from the main project directory:
-// Magno-Dental-Desktop/.env
+const path = require("node:path");
+const fs = require("node:fs");
+
+/* ============================================
+   LOAD ENVIRONMENT VARIABLES
+   ============================================ */
+
+// Load .env from the project root.
 require("dotenv").config({
   path: path.resolve(__dirname, "../.env"),
 });
@@ -11,7 +17,10 @@ const cors = require("cors");
 
 const { initializeSQLite, getSQLite, closeSQLite } = require("./config/sqlite");
 
-// Verify JWT_SECRET before loading security modules.
+/* ============================================
+   ENVIRONMENT VALIDATION
+   ============================================ */
+
 if (
   !process.env.JWT_SECRET ||
   process.env.JWT_SECRET.length < 32 ||
@@ -19,19 +28,37 @@ if (
   /^(replace|your[-_]|changeme)/i.test(process.env.JWT_SECRET)
 ) {
   throw new Error(
-    "JWT_SECRET must be a strong secret of at least 32 characters.",
+    "JWT_SECRET must be a strong secret of " + "at least 32 characters.",
   );
 }
 
-// SQLite development database.
+/* ============================================
+   APPLICATION CONFIGURATION
+   ============================================ */
+
+const PORT = Number(process.env.PORT || 3001);
+
+const SERVE_BUILT_UI = process.env.MAGNO_SERVE_BUILT_UI === "1";
+
+const FRONTEND_DIST = path.resolve(__dirname, "../front-end/dist");
+
+const FRONTEND_INDEX = path.join(FRONTEND_DIST, "index.html");
+
+/* ============================================
+   SQLITE DATABASE
+   ============================================ */
+
 const databasePath = process.env.SQLITE_DB_PATH
   ? path.resolve(process.env.SQLITE_DB_PATH)
   : path.resolve(__dirname, "data", "dental_offline.db");
 
-// Open SQLite before handling requests.
+// Open SQLite before registering API routes.
 initializeSQLite(databasePath);
 
-// Only import routes already converted to SQLite.
+/* ============================================
+   SQLITE ROUTES
+   ============================================ */
+
 const authRoutes = require("./routes/authRoutes");
 const patientRoutes = require("./routes/patientRoutes");
 const queueRoutes = require("./routes/queueRoutes");
@@ -42,18 +69,30 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 
+/* ============================================
+   MIDDLEWARE AND SERVICES
+   ============================================ */
+
 const auth = require("./middleware/authMiddleware");
 
 const { getPatientImage, maskImages } = require("./services/privateImages");
 
 const { securityHeaders } = require("./middleware/securityMiddleware");
 
+/* ============================================
+   EXPRESS APPLICATION
+   ============================================ */
+
 const app = express();
 
 app.disable("x-powered-by");
+
 app.use(securityHeaders);
 
-// Allow the local React development frontend.
+/* ============================================
+   CORS CONFIGURATION
+   ============================================ */
+
 const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
   .split(",")
   .map((origin) => origin.trim())
@@ -68,13 +107,19 @@ app.use(
 
       return callback(new Error("CORS origin is not allowed."));
     },
+
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+
     allowedHeaders: ["Content-Type", "Authorization"],
+
     credentials: false,
   }),
 );
 
-// Prevent caching private API responses.
+/* ============================================
+   PREVENT PRIVATE RESPONSE CACHING
+   ============================================ */
+
 app.use((req, res, next) => {
   if (req.headers.authorization) {
     res.set("Cache-Control", "no-store");
@@ -83,8 +128,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// Request body parsing.
-app.use(express.json({ limit: "1mb" }));
+/* ============================================
+   REQUEST BODY PARSING
+   ============================================ */
+
+app.use(
+  express.json({
+    limit: "1mb",
+  }),
+);
+
 app.use(
   express.urlencoded({
     extended: false,
@@ -92,18 +145,26 @@ app.use(
   }),
 );
 
-// Preserve private image masking.
+/* ============================================
+   PRIVATE IMAGE RESPONSE MASKING
+   ============================================ */
+
 app.use((req, res, next) => {
   const originalJson = res.json.bind(res);
 
-  res.json = (body) => originalJson(maskImages(body));
+  res.json = (body) => {
+    return originalJson(maskImages(body));
+  };
 
   next();
 });
 
-// Health checks.
+/* ============================================
+   HEALTH CHECKS
+   ============================================ */
+
 app.get("/health/live", (req, res) => {
-  res.json({
+  return res.json({
     status: "ok",
     database: "sqlite",
   });
@@ -114,6 +175,7 @@ app.get("/health/ready", (req, res) => {
     const db = getSQLite();
 
     db.prepare("SELECT id FROM users LIMIT 1").get();
+
     db.prepare("SELECT bucket_key FROM security_rate_limits LIMIT 1").get();
 
     return res.json({
@@ -129,36 +191,134 @@ app.get("/health/ready", (req, res) => {
   }
 });
 
-// Protected patient images.
+/* ============================================
+   PROTECTED PATIENT IMAGES
+   ============================================ */
+
 app.get("/patient-images/:id", auth, getPatientImage);
 
-// Never expose uploaded images through static routes.
+// Never expose private uploads as static files.
 app.use("/uploads", (req, res) => {
   return res.status(404).json({
     message: "Not found.",
   });
 });
 
-// SQLite-compatible routes.
+/* ============================================
+   SQLITE API ROUTES
+   ============================================ */
+
+// Register each route module only once.
+
 app.use("/", authRoutes);
+
 app.use("/", patientRoutes);
+
 app.use("/", queueRoutes);
-app.use("/", authRoutes);
-app.use("/", patientRoutes);
+
 app.use("/", appointmentRoutes);
-app.use("/", queueRoutes);
+
 app.use("/", visitRoutes);
+
 app.use("/", dentalChartRoutes);
+
 app.use("/", paymentRoutes);
+
 app.use("/", dashboardRoutes);
+
 app.use("/", reportRoutes);
 
-// Default API response.
-app.get("/", (req, res) => {
-  res.send("Magno Dental Clinic SQLite API is running.");
+/* ============================================
+   ELECTRON PRODUCTION FRONTEND
+   ============================================ */
+
+if (SERVE_BUILT_UI) {
+  // Validate the compiled frontend.
+  if (!fs.existsSync(FRONTEND_INDEX)) {
+    throw new Error(
+      "React production build is missing.\n" +
+        "Run npm run build:ui:desktop first.",
+    );
+  }
+
+  console.log("Serving compiled React frontend:", FRONTEND_DIST);
+
+  // Serve only files inside front-end/dist.
+  app.use(
+    express.static(FRONTEND_DIST, {
+      index: false,
+      dotfiles: "deny",
+      fallthrough: true,
+    }),
+  );
+
+  // React Router fallback.
+  // This lets client-side pages load when
+  // refreshing or navigating directly to a URL.
+  app.use((req, res, next) => {
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      return next();
+    }
+
+    const requestPath = req.path;
+
+    // Do not turn missing API routes or
+    // protected resources into React HTML.
+    const excludedPrefixes = [
+      "/health",
+      "/patient-images",
+      "/uploads",
+      "/assets",
+      "/api",
+    ];
+
+    if (
+      excludedPrefixes.some(
+        (prefix) =>
+          requestPath === prefix || requestPath.startsWith(prefix + "/"),
+      )
+    ) {
+      return next();
+    }
+
+    // File requests must not receive index.html.
+    if (path.posix.extname(requestPath)) {
+      return next();
+    }
+
+    // Only handle browser page navigation.
+    if (!req.accepts("html")) {
+      return next();
+    }
+
+    res.set("Cache-Control", "no-store");
+
+    return res.sendFile(FRONTEND_INDEX);
+  });
+} else {
+  /* ==========================================
+     DEVELOPMENT API STATUS
+     ========================================== */
+
+  app.get("/", (req, res) => {
+    return res.send("Magno Dental Clinic SQLite API is running.");
+  });
+}
+
+/* ============================================
+   NOT FOUND HANDLER
+   ============================================ */
+
+app.use((req, res) => {
+  return res.status(404).json({
+    message: "Endpoint not found.",
+  });
 });
 
-// Error handling.
+/* ============================================
+   ERROR HANDLING
+   ============================================ */
+
 app.use((err, req, res, next) => {
   if (err.message === "CORS origin is not allowed.") {
     return res.status(403).json({
@@ -179,15 +339,26 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Run SQLite backend locally.
-const PORT = Number(process.env.PORT || 3001);
+/* ============================================
+   START LOCAL SQLITE BACKEND
+   ============================================ */
 
+// Bind to loopback only.
+// Do not expose the clinic API to the LAN.
 const server = app.listen(PORT, "127.0.0.1", () => {
-  console.log(`SQLite backend running at http://127.0.0.1:${PORT}`);
+  console.log(`SQLite backend running at ` + `http://127.0.0.1:${PORT}`);
+
+  console.log(
+    "Frontend mode:",
+    SERVE_BUILT_UI
+      ? "Compiled React production build"
+      : "API / Vite development",
+  );
 });
 
 server.on("error", (error) => {
   console.error("Unable to start SQLite backend:", error);
+
   process.exitCode = 1;
 
   try {
@@ -197,13 +368,16 @@ server.on("error", (error) => {
   }
 });
 
-// Periodic maintenance.
+/* ============================================
+   PERIODIC MAINTENANCE
+   ============================================ */
+
 const maintenance = setInterval(
   () => {
     try {
       const db = getSQLite();
 
-      // Delete expired sessions.
+      // Delete expired authentication sessions.
       db.prepare(
         `
       DELETE FROM auth_sessions
@@ -227,7 +401,10 @@ const maintenance = setInterval(
 
 maintenance.unref();
 
-// Graceful shutdown.
+/* ============================================
+   GRACEFUL SHUTDOWN
+   ============================================ */
+
 let shuttingDown = false;
 
 function shutdown(signal) {
@@ -241,6 +418,7 @@ function shutdown(signal) {
 
   const forceExit = setTimeout(() => {
     console.error("Shutdown timeout exceeded.");
+
     process.exit(1);
   }, 20000);
 
@@ -249,14 +427,17 @@ function shutdown(signal) {
   server.close((error) => {
     if (error) {
       console.error("HTTP server close failed:", error);
+
       process.exitCode = 1;
     }
 
     try {
       closeSQLite();
+
       console.log("SQLite database closed safely.");
     } catch (closeError) {
       console.error("SQLite database close failed:", closeError);
+
       process.exitCode = 1;
     }
 
@@ -265,7 +446,6 @@ function shutdown(signal) {
     process.exit(process.exitCode || 0);
   });
 
-  // Close idle HTTP connections if available.
   server.closeIdleConnections?.();
 }
 
