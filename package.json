@@ -20,6 +20,7 @@
     "migrate:deploy": "node back-end/scripts/migrateDeployment.js",
     "test": "node --test back-end/tests/*.test.js",
     "build:ui": "npm --prefix front-end run build",
+    "build:ui:desktop": "npm --prefix front-end run build -- --mode desktop",
     "desktop:dev": "electron .",
     "desktop:dist": "electron-builder --win nsis --x64",
     "desktop:postinstall": "electron-builder install-app-deps"

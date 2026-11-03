@@ -24,7 +24,9 @@ if (
 }
 
 // SQLite development database.
-const databasePath = path.resolve(__dirname, "data", "dental_offline.db");
+const databasePath = process.env.SQLITE_DB_PATH
+  ? path.resolve(process.env.SQLITE_DB_PATH)
+  : path.resolve(__dirname, "data", "dental_offline.db");
 
 // Open SQLite before handling requests.
 initializeSQLite(databasePath);
