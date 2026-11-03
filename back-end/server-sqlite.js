@@ -449,3 +449,20 @@ function shutdown(signal) {
 process.once("SIGINT", () => shutdown("SIGINT"));
 
 process.once("SIGTERM", () => shutdown("SIGTERM"));
+
+/* ============================================
+   ELECTRON UTILITY PROCESS SHUTDOWN
+   ============================================ */
+
+// Electron UtilityProcess provides parentPort.
+// Ordinary Node.js execution does not.
+
+if (process.parentPort) {
+  process.parentPort.on("message", (event) => {
+    if (event.data?.type === "shutdown") {
+      console.log("Electron requested a safe backend shutdown.");
+
+      shutdown("ELECTRON_SHUTDOWN");
+    }
+  });
+}

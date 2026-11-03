@@ -1,34 +1,26 @@
 "use strict";
 
-const { app, BrowserWindow, dialog, session } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  dialog,
+  session,
+  utilityProcess,
+} = require("electron");
 
 const path = require("node:path");
 const fs = require("node:fs");
 const net = require("node:net");
-const { spawn } = require("node:child_process");
-
-/* ============================================
-   PROJECT PATHS
-   ============================================ */
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
-
 const BACKEND_DIR = path.join(PROJECT_ROOT, "back-end");
-
 const BACKEND_SCRIPT = path.join(BACKEND_DIR, "server-sqlite.js");
 
 const FRONTEND_DIST = path.join(PROJECT_ROOT, "front-end", "dist");
 
-/* ============================================
-   APPLICATION CONFIGURATION
-   ============================================ */
-
 const BACKEND_PORT = 3001;
-
 const BACKEND_URL = `http://127.0.0.1:${BACKEND_PORT}`;
 
-// IMPORTANT:
-// Declare PREVIEW_BUILD before using it.
 const PREVIEW_BUILD = process.env.MAGNO_PREVIEW_BUILD === "1";
 
 const FRONTEND_URL = PREVIEW_BUILD ? BACKEND_URL : "http://127.0.0.1:5173";
@@ -36,21 +28,22 @@ const FRONTEND_URL = PREVIEW_BUILD ? BACKEND_URL : "http://127.0.0.1:5173";
 let mainWindow = null;
 let backendProcess = null;
 let quitting = false;
+let shutdownStarted = false;
 
-console.log("==================================");
-console.log("MAGNO DENTAL DESKTOP");
-console.log("Preview mode:", PREVIEW_BUILD);
-console.log("Frontend URL:", FRONTEND_URL);
-console.log("Backend URL:", BACKEND_URL);
-console.log("==================================");
+console.log("================================");
+console.log("Magno Dental Desktop");
+console.log("Production preview:", PREVIEW_BUILD);
+console.log("Frontend:", FRONTEND_URL);
+console.log("Backend:", BACKEND_URL);
+console.log("================================");
 
 /* ============================================
-   SINGLE INSTANCE LOCK
+   SINGLE INSTANCE
    ============================================ */
 
-const hasSingleInstanceLock = app.requestSingleInstanceLock();
+const hasLock = app.requestSingleInstanceLock();
 
-if (!hasSingleInstanceLock) {
+if (!hasLock) {
   app.quit();
 } else {
   app.on("second-instance", () => {
@@ -66,53 +59,76 @@ if (!hasSingleInstanceLock) {
 }
 
 /* ============================================
-   PORT AVAILABILITY
+   APPDATA PATHS
+   ============================================ */
+
+function getClinicPaths() {
+  const root = path.join(app.getPath("appData"), "MagnoDentalDesktop");
+
+  const clinicData = path.join(root, "clinic-data");
+
+  return {
+    database: path.join(clinicData, "data", "dental_offline.db"),
+
+    images: path.join(clinicData, "storage", "patient-images"),
+
+    backups: path.join(root, "backups"),
+  };
+}
+
+/* ============================================
+   CHECK BACKEND PORT
    ============================================ */
 
 function checkBackendPort() {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
 
-    server.once("error", (error) => {
+    server.once("error", () => {
       reject(
         new Error(
           `Port ${BACKEND_PORT} is already in use. ` +
-            "Close the existing backend before starting Electron. " +
-            error.message,
+            "Close the previous backend first.",
         ),
       );
     });
 
-    server.listen(BACKEND_PORT, "127.0.0.1", () => {
-      server.close(resolve);
-    });
+    server.listen(BACKEND_PORT, "127.0.0.1", () => server.close(resolve));
   });
 }
 
 /* ============================================
-   START SQLITE BACKEND
+   START EMBEDDED BACKEND
    ============================================ */
 
 function startBackend() {
   if (backendProcess) {
-    throw new Error("SQLite backend is already running.");
+    throw new Error("Backend is already running.");
   }
 
   if (!fs.existsSync(BACKEND_SCRIPT)) {
-    throw new Error(`SQLite backend not found:\n${BACKEND_SCRIPT}`);
+    throw new Error(`Backend script not found: ${BACKEND_SCRIPT}`);
   }
 
-  console.log("Starting SQLite backend...");
+  const paths = getClinicPaths();
 
-  // DEVELOPMENT IMPLEMENTATION:
-  // Uses the Node.js installed on this computer.
-  // Production packaging will use Electron's
-  // embedded Node runtime.
-  const child = spawn("node", [BACKEND_SCRIPT], {
+  if (!fs.existsSync(paths.database)) {
+    throw new Error(
+      "AppData clinic database not found:\n" +
+        paths.database +
+        "\n\nComplete Step 6.3C migration first.",
+    );
+  }
+
+  console.log("Starting Electron utility backend...");
+  console.log("Using database:", paths.database);
+
+  const child = utilityProcess.fork(BACKEND_SCRIPT, [], {
     cwd: BACKEND_DIR,
-    windowsHide: true,
 
-    stdio: ["ignore", "pipe", "pipe"],
+    stdio: "pipe",
+
+    serviceName: "Magno Dental SQLite Backend",
 
     env: {
       ...process.env,
@@ -122,25 +138,31 @@ function startBackend() {
       FRONTEND_URL,
 
       MAGNO_SERVE_BUILT_UI: PREVIEW_BUILD ? "1" : "0",
+
+      SQLITE_DB_PATH: paths.database,
+
+      PATIENT_IMAGES_DIR: paths.images,
+
+      MAGNO_BACKUP_DIR: paths.backups,
     },
   });
 
   backendProcess = child;
 
-  child.stdout.on("data", (data) => {
+  child.stdout?.on("data", (data) => {
     console.log("[SQLite backend]", data.toString().trim());
   });
 
-  child.stderr.on("data", (data) => {
+  child.stderr?.on("data", (data) => {
     console.error("[SQLite backend error]", data.toString().trim());
   });
 
   child.on("error", (error) => {
-    console.error("Unable to start SQLite backend:", error);
+    console.error("Utility process error:", error);
   });
 
-  child.on("exit", (code, signal) => {
-    console.log("SQLite backend exited.", "Code:", code, "Signal:", signal);
+  child.on("exit", (code) => {
+    console.log("SQLite utility process exited with code:", code);
 
     if (backendProcess === child) {
       backendProcess = null;
@@ -148,9 +170,9 @@ function startBackend() {
 
     if (!quitting) {
       dialog.showErrorBox(
-        "SQLite Backend Stopped",
-        "The local database server stopped unexpectedly. " +
-          "The desktop application will now close.",
+        "Backend Stopped",
+        "The SQLite backend stopped unexpectedly. " +
+          "Check the terminal for errors.",
       );
 
       app.quit();
@@ -159,17 +181,15 @@ function startBackend() {
 }
 
 /* ============================================
-   WAIT FOR BACKEND TO START
+   WAIT FOR SQLITE
    ============================================ */
 
 async function waitForBackend() {
-  const timeoutMilliseconds = 20000;
-
-  const deadline = Date.now() + timeoutMilliseconds;
+  const deadline = Date.now() + 20000;
 
   while (Date.now() < deadline) {
     if (!backendProcess) {
-      throw new Error("SQLite backend stopped during startup.");
+      throw new Error("SQLite backend exited during startup.");
     }
 
     try {
@@ -178,26 +198,23 @@ async function waitForBackend() {
       });
 
       if (response.ok) {
-        const result = await response.json();
+        const data = await response.json();
 
-        if (result.status === "ready" && result.database === "sqlite") {
-          console.log("SQLite backend is ready.");
-
+        if (data.status === "ready" && data.database === "sqlite") {
+          console.log("SQLite backend ready.");
           return;
         }
       }
     } catch {
-      // Backend may still be initializing.
+      // Wait for backend initialization.
     }
 
-    await new Promise((resolve) => {
-      setTimeout(resolve, 250);
-    });
+    await new Promise((resolve) => setTimeout(resolve, 250));
   }
 
   throw new Error(
-    "SQLite backend failed to become ready within 20 seconds. " +
-      "Check the backend console logs.",
+    "SQLite backend did not become ready. " +
+      "Check native module compatibility and backend logs.",
   );
 }
 
@@ -209,13 +226,12 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
-
     minWidth: 1024,
     minHeight: 700,
 
     show: false,
 
-    title: "Magno Dental Clinic Management System",
+    title: "Magno Dental Management",
 
     backgroundColor: "#f4f8fb",
 
@@ -225,34 +241,17 @@ function createWindow() {
       preload: path.join(__dirname, "preload.cjs"),
 
       contextIsolation: true,
-
       nodeIntegration: false,
-
       sandbox: true,
-
       webSecurity: true,
     },
   });
 
-  /* ------------------------------------------
-     Block new windows
-     ------------------------------------------ */
-
-  mainWindow.webContents.setWindowOpenHandler(() => ({
-    action: "deny",
-  }));
-
-  /* ------------------------------------------
-     Restrict navigation
-     ------------------------------------------ */
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
 
   mainWindow.webContents.on("will-navigate", (event, targetUrl) => {
     try {
-      const allowedOrigin = new URL(FRONTEND_URL).origin;
-
-      const targetOrigin = new URL(targetUrl).origin;
-
-      if (targetOrigin !== allowedOrigin) {
+      if (new URL(targetUrl).origin !== new URL(FRONTEND_URL).origin) {
         event.preventDefault();
       }
     } catch {
@@ -260,36 +259,19 @@ function createWindow() {
     }
   });
 
-  /* ------------------------------------------
-     Show window when ready
-     ------------------------------------------ */
-
   mainWindow.once("ready-to-show", () => {
-    if (mainWindow) {
-      mainWindow.show();
-    }
+    mainWindow?.show();
   });
 
-  /* ------------------------------------------
-     Load React application
-     ------------------------------------------ */
-
-  console.log("Loading React frontend:", FRONTEND_URL);
-
   mainWindow.loadURL(FRONTEND_URL).catch((error) => {
+    if (quitting) return;
+
     console.error("React frontend failed to load:", error);
 
-    const errorMessage = PREVIEW_BUILD
-      ? "Unable to load the compiled React frontend.\n\n" +
-        "Make sure you have:\n" +
-        "1. Run npm run build:ui:desktop\n" +
-        "2. Added the React static-serving block " +
-        "to server-sqlite.js"
-      : "Unable to connect to the Vite development server.\n\n" +
-        "Start Vite using:\n" +
-        "cd front-end\nnpm run dev";
-
-    dialog.showErrorBox("Frontend Loading Error", errorMessage);
+    dialog.showErrorBox(
+      "Frontend Error",
+      "Unable to load the React application.",
+    );
 
     app.quit();
   });
@@ -300,63 +282,45 @@ function createWindow() {
 }
 
 /* ============================================
-   DESKTOP STARTUP
+   START DESKTOP
    ============================================ */
 
 async function startDesktop() {
-  // The packaged installer is not enabled yet.
   if (app.isPackaged) {
     throw new Error(
-      "Production packaging is not configured. " +
-        "Complete the backend and AppData setup first.",
+      "Installer configuration is not complete. " +
+        "Complete the production packaging step first.",
     );
   }
 
   app.setAppUserModelId("com.magno.dental.desktop");
 
-  /* ------------------------------------------
-     Validate production-preview build
-     ------------------------------------------ */
-
   if (PREVIEW_BUILD) {
-    const indexFile = path.join(FRONTEND_DIST, "index.html");
+    const index = path.join(FRONTEND_DIST, "index.html");
 
-    if (!fs.existsSync(indexFile)) {
+    if (!fs.existsSync(index)) {
       throw new Error(
-        "Compiled React frontend not found.\n\n" +
-          "Run:\nnpm run build:ui:desktop",
+        "React build missing. " + "Run npm run build:ui:desktop.",
       );
     }
   }
 
-  /* ------------------------------------------
-     Ensure backend port is available
-     ------------------------------------------ */
-
   await checkBackendPort();
-
-  /* ------------------------------------------
-     Start backend and wait for readiness
-     ------------------------------------------ */
 
   startBackend();
 
   await waitForBackend();
 
-  /* ------------------------------------------
-     Restrict permissions
-     ------------------------------------------ */
-
+  // Allow the patient camera feature only
+  // from the application's local origin.
   session.defaultSession.setPermissionRequestHandler(
     (webContents, permission, callback) => {
       let allowed = false;
 
       try {
-        const currentOrigin = new URL(webContents.getURL()).origin;
-
-        const allowedOrigin = new URL(FRONTEND_URL).origin;
-
-        allowed = permission === "media" && currentOrigin === allowedOrigin;
+        allowed =
+          permission === "media" &&
+          new URL(webContents.getURL()).origin === new URL(FRONTEND_URL).origin;
       } catch {
         allowed = false;
       }
@@ -365,18 +329,69 @@ async function startDesktop() {
     },
   );
 
-  /* ------------------------------------------
-     Create desktop window
-     ------------------------------------------ */
-
   createWindow();
 }
 
 /* ============================================
-   APP READY
+   GRACEFUL BACKEND SHUTDOWN
    ============================================ */
 
-if (hasSingleInstanceLock) {
+function stopBackend() {
+  const child = backendProcess;
+
+  if (!child) {
+    return Promise.resolve(true);
+  }
+
+  return new Promise((resolve) => {
+    let finished = false;
+
+    const finish = (clean) => {
+      if (finished) return;
+
+      finished = true;
+      clearTimeout(timeout);
+
+      resolve(clean);
+    };
+
+    const timeout = setTimeout(() => {
+      console.error(
+        "Backend shutdown timed out. " + "Forcing utility-process termination.",
+      );
+
+      child.kill();
+      finish(false);
+    }, 20000);
+
+    child.once("exit", (code) => {
+      if (backendProcess === child) {
+        backendProcess = null;
+      }
+
+      finish(code === 0);
+    });
+
+    try {
+      console.log("Requesting graceful SQLite shutdown...");
+
+      child.postMessage({
+        type: "shutdown",
+      });
+    } catch (error) {
+      console.error("Shutdown message failed:", error);
+
+      child.kill();
+      finish(false);
+    }
+  });
+}
+
+/* ============================================
+   ELECTRON STARTUP
+   ============================================ */
+
+if (hasLock) {
   app
     .whenReady()
     .then(startDesktop)
@@ -390,12 +405,12 @@ if (hasSingleInstanceLock) {
 }
 
 /* ============================================
-   MACOS / WINDOW REACTIVATION
+   WINDOW REACTIVATION
    ============================================ */
 
 app.on("activate", () => {
   if (
-    hasSingleInstanceLock &&
+    hasLock &&
     !quitting &&
     backendProcess &&
     BrowserWindow.getAllWindows().length === 0
@@ -405,19 +420,32 @@ app.on("activate", () => {
 });
 
 /* ============================================
-   APPLICATION SHUTDOWN
+   APPLICATION QUIT
    ============================================ */
 
-app.on("before-quit", () => {
+app.on("before-quit", (event) => {
+  if (shutdownStarted) return;
+
+  event.preventDefault();
+
+  shutdownStarted = true;
   quitting = true;
 
-  if (backendProcess) {
-    console.log("Stopping SQLite backend...");
+  stopBackend()
+    .then((clean) => {
+      if (clean) {
+        console.log("SQLite backend closed successfully.");
+      } else {
+        console.error("Backend did not confirm a clean shutdown.");
+      }
 
-    backendProcess.kill();
+      app.quit();
+    })
+    .catch((error) => {
+      console.error("Application shutdown error:", error);
 
-    backendProcess = null;
-  }
+      app.quit();
+    });
 });
 
 app.on("window-all-closed", () => {

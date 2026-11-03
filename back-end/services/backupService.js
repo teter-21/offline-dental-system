@@ -6,14 +6,19 @@ const Database = require("better-sqlite3");
 // Same locations used by the SQLite backend.
 const BACKEND_DIR = path.resolve(__dirname, "..");
 
-const DATABASE_PATH = path.join(BACKEND_DIR, "data", "dental_offline.db");
+const DATABASE_PATH = path.resolve(
+  process.env.SQLITE_DB_PATH ||
+    path.join(BACKEND_DIR, "data", "dental_offline.db"),
+);
 
 const IMAGE_DIRECTORY = path.resolve(
   process.env.PATIENT_IMAGES_DIR ||
     path.join(BACKEND_DIR, "storage", "patient-images"),
 );
 
-const BACKUP_DIRECTORY = path.join(BACKEND_DIR, "backups");
+const BACKUP_DIRECTORY = path.resolve(
+  process.env.MAGNO_BACKUP_DIR || path.join(BACKEND_DIR, "backups"),
+);
 
 function validImageFilename(filename) {
   return /^[a-f0-9-]{36}\.jpg$/.test(filename);
