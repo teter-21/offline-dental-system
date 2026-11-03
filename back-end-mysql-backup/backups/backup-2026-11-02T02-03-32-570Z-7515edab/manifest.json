@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "application": "Magno Dental Desktop",
+  "createdAt": "2026-11-02T02:03:32.732Z",
+  "databaseSha256": "5b85a58196e59cde1a9fac43e2c5f8b1086b68174d6b7f9ed1393495bc6ae87b",
+  "images": [
+    {
+      "filename": "35508328-dbd0-4756-9ad7-50bd9a9e4a71.jpg",
+      "size": 30426,
+      "sha256": "2b00c1ae33caad9653c668a233bf7b06fcc0b37ce7f71cedeca5159721c8acd9"
+    },
+    {
+      "filename": "4e5e3723-bd2b-4a3f-80cf-d95fc801d331.jpg",
+      "size": 153106,
+      "sha256": "99acd4a586ed3fc312a5b4ccad7f663f3ca1564132434401bc0af2c6043d7383"
+    },
+    {
+      "filename": "56065e88-5bf1-4b09-8a49-6651d5b65a2e.jpg",
+      "size": 26251,
+      "sha256": "3fccfb353d629963346ef2d31cea5c9111cd57e73021cd8069c3bd9d76c72160"
+    },
+    {
+      "filename": "70b9f34a-54cc-46d8-9612-1e97e41cfd08.jpg",
+      "size": 29547,
+      "sha256": "c9373acc84058e35cc66ca3ed45b7690b9ecc08bbccb82d5e947f48b12ab8f0b"
+    },
+    {
+      "filename": "8aec424b-9ac1-4faa-af3b-93cffc2e5658.jpg",
+      "size": 32760,
+      "sha256": "88514383572b4a7978b2e4e2b7cdd8a050863c237c8ffd8eb9e3ae68e0ac0e21"
+    },
+    {
+      "filename": "9a483899-46af-49dd-bcb4-c33e8389bf48.jpg",
+      "size": 31503,
+      "sha256": "23cf57aacc3cf91c6c72283237f3aed521e770b40efd2ceaec72e749b8ac3482"
+    },
+    {
+      "filename": "ab931dc2-b099-4407-9e95-f9b4a4f162a0.jpg",
+      "size": 28931,
+      "sha256": "02fd90229e0d703da538cf8b4b15849f426739aa76876a20c637ecc5057551d8"
+    }
+  ]
+}

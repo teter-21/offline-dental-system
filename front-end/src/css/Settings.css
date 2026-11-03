@@ -1,0 +1,370 @@
+/* Shared account settings style for the admin and patient portals. */
+
+.account-page {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 32px 34px 45px;
+  box-sizing: border-box;
+}
+
+.account-header {
+  margin-bottom: 22px;
+}
+
+.account-header h1 {
+  margin: 0;
+  color: #24425f;
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+.account-header > div > p:last-child {
+  margin: 7px 0 0;
+  color: #7d8d9c;
+  font-size: 13px;
+}
+
+.account-form {
+  width: 100%;
+}
+
+.account-card {
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #dbe6ed;
+  box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+}
+
+.account-profile-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 26px;
+  background: #f7fbfd;
+  border-bottom: 1px solid #dbe6ed;
+}
+
+.account-avatar {
+  width: 62px;
+  height: 62px;
+  flex: 0 0 62px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #eaf3fa;
+  color: #3d6f9f;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.account-profile-top h2 {
+  margin: 0;
+  color: #24425f;
+  font-size: 19px;
+}
+
+.account-profile-top p {
+  margin: 4px 0 8px;
+  color: #7d8d9c;
+  font-size: 12px;
+}
+
+.account-role {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 0px;
+  background: #e9f5f0;
+  color: #4a8877;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.account-section {
+  padding: 24px 26px;
+  border-bottom: 1px solid #dbe6ed;
+}
+
+.account-section h3 {
+  margin: 0 0 16px;
+  color: #24425f;
+  font-size: 15px;
+}
+
+.account-help {
+  margin: -7px 0 16px;
+  color: #7d8d9c;
+  font-size: 12px;
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 17px 20px;
+}
+
+.account-grid label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 6px;
+  color: #24425f;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.account-grid input,
+.account-grid select {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 9px 11px;
+  border: 1px solid #dbe6ed;
+  border-radius: 0px;
+  outline: none;
+  background: #fff;
+  color: #536a7d;
+  font-size: 12px;
+}
+
+.account-grid input:focus,
+.account-grid select:focus {
+  border-color: #4f86c6;
+  box-shadow: 0 0 0 3px rgba(79, 134, 198, 0.12);
+}
+
+.account-grid input:disabled {
+  background: #f4f8fb;
+  color: #7d8d9c;
+  cursor: not-allowed;
+}
+
+.account-full-width {
+  grid-column: 1 / -1;
+}
+
+.account-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 18px 26px;
+  background: #fbfdfe;
+}
+
+.account-actions button {
+  min-width: 125px;
+  height: 40px;
+  padding: 0 18px;
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+}
+
+.account-actions button:active {
+  background: transparent;
+  color: var(--color-primary);
+}
+
+.account-actions button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.account-message {
+  min-height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  box-sizing: border-box;
+  color: #7d8d9c;
+}
+
+@media (max-width: 800px) {
+  .account-page {
+    padding: 25px 20px 35px;
+  }
+
+  .account-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .account-full-width {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .account-page {
+    padding: 20px 14px 30px;
+  }
+
+  .account-header h1 {
+    font-size: 24px;
+  }
+
+  .account-profile-top,
+  .account-section,
+  .account-actions {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .account-profile-top {
+    align-items: flex-start;
+  }
+
+  .account-avatar {
+    width: 52px;
+    height: 52px;
+    flex-basis: 52px;
+    font-size: 20px;
+  }
+
+  .account-actions button {
+    width: 100%;
+  }
+}
+
+/* Admin account management is now part of Settings. */
+.admin-settings-section {
+  margin-top: 24px;
+}
+
+/* ========================================
+   SYSTEM BACKUP AND RESTORE
+   ======================================== */
+
+.settings-backup-card {
+  margin-top: 24px;
+}
+
+.settings-backup-heading {
+  padding-bottom: 18px;
+}
+
+.settings-backup-heading .account-help {
+  margin: 0;
+  max-width: 720px;
+  line-height: 1.7;
+}
+
+.settings-backup-options {
+  padding: 0 26px;
+}
+
+.settings-backup-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 24px 0;
+  border-bottom: 1px solid #dbe6ed;
+}
+
+.settings-backup-item:last-child {
+  border-bottom: none;
+}
+
+.settings-backup-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-backup-info h4 {
+  margin: 0 0 8px;
+  color: #24425f;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.settings-backup-info p {
+  margin: 0;
+  max-width: 590px;
+  color: #7d8d9c;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.settings-backup-button,
+.settings-restore-button {
+  flex: 0 0 auto;
+  min-width: 145px;
+  height: 40px;
+  padding: 0 18px;
+  border: 1px solid var(--color-primary);
+  border-radius: 0;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.settings-restore-button {
+  background: #fff;
+  color: var(--color-primary);
+}
+
+.settings-backup-button:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.settings-restore-button:hover:not(:disabled) {
+  background: #eef5fc;
+}
+
+.settings-backup-button:disabled,
+.settings-restore-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-backup-note {
+  padding: 15px 26px;
+  border-top: 1px solid #dbe6ed;
+  background: #f7fbfd;
+}
+
+.settings-backup-note p {
+  margin: 0;
+  color: #647d91;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* Responsive Settings backup section */
+
+@media (max-width: 800px) {
+  .settings-backup-item {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .settings-backup-button,
+  .settings-restore-button {
+    flex: none;
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .settings-backup-options {
+    padding: 0 18px;
+  }
+
+  .settings-backup-note {
+    padding: 15px 18px;
+  }
+
+  .settings-backup-item {
+    padding: 20px 0;
+  }
+}

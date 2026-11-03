@@ -1,0 +1,5 @@
+*
+!.gitignore
+!patient-images/
+patient-images/*
+!patient-images/.gitkeep

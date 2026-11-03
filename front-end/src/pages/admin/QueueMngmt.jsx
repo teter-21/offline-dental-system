@@ -1,0 +1,562 @@
+import { getAccessToken } from "../../utils/session.js";
+import API_BASE_URL from "../../config/apiBase.js";
+import React, { useState } from "react";
+import MultiServiceSelect from "../../components/MultiServiceSelect";
+import axios from "axios";
+import { useAutoRefresh } from "../../utils/useAutoRefresh";
+import { FaUsers, FaWalking, FaCalendarCheck, FaPhone, FaPlay, FaCheck, FaForward, FaTimes, FaUserPlus, FaPlus } from "react-icons/fa";
+import "../../css/QueueMngmt.css";
+import TreatmentVisitModal from "../../components/TreatmentVisitModal";
+function QueueManagement() {
+  const [queue, setQueue] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [showWalkInModal, setShowWalkInModal] = useState(false);
+  const [patients, setPatients] = useState([]);
+  const [patientsLoading, setPatientsLoading] = useState(false);
+  const [patientSearch, setPatientSearch] = useState("");
+  const [walkInForm, setWalkInForm] = useState({
+    patient_id: "",
+    patient_name: "",
+    service: "",
+    reason: "",
+    priority: "Normal"
+  });
+  const [walkInSubmitting, setWalkInSubmitting] = useState(false);
+  const [callingNext, setCallingNext] = useState(false);
+  const [showTreatmentModal, setShowTreatmentModal] = useState(false);
+  const [treatmentPatient, setTreatmentPatient] = useState(null);
+
+  /* GET TOKEN */
+
+  const getToken = () => {
+    return getAccessToken();
+  };
+
+  /* LOAD QUEUE */
+
+  const fetchQueue = async ({
+    background = false
+  } = {}) => {
+    try {
+      if (!background) setLoading(true);
+      const response = await axios.get(API_BASE_URL + "/queue", {
+        headers: {
+          Authorization: `Bearer ${getToken()}`
+        }
+      });
+      setQueue(Array.isArray(response.data) ? response.data : []);
+      setError(false);
+    } catch (err) {
+      console.error("Queue error:", err);
+      if (!background) {
+        setError(true);
+        if (!err?.nativeAlertHandled) window.alert("Unable to load today's queue.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* GET PATIENTS FOR WALK-IN */
+
+  const fetchPatients = async () => {
+    try {
+      setPatientsLoading(true);
+      const response = await axios.get(API_BASE_URL + "/patients", {
+        headers: {
+          Authorization: `Bearer ${getToken()}`
+        }
+      });
+      setPatients(Array.isArray(response.data) ? response.data : []);
+    } catch (err) {
+      console.error("Patients error:", err);
+      if (!err?.nativeAlertHandled) window.alert("Unable to load patients.");
+    } finally {
+      setPatientsLoading(false);
+    }
+  };
+
+  /* OPEN WALK-IN MODAL */
+
+  const openWalkInModal = () => {
+    setWalkInForm({
+      patient_id: "",
+      patient_name: "",
+      service: "",
+      reason: "",
+      priority: "Normal"
+    });
+    setShowWalkInModal(true);
+    fetchPatients();
+  };
+
+  /* HANDLE WALK-IN FORM */
+  const handleWalkInChange = event => {
+    const {
+      name,
+      value
+    } = event.target;
+    setWalkInForm(previous => ({
+      ...previous,
+      [name]: value
+    }));
+  };
+  const selectWalkInPatient = patient => {
+    setWalkInForm(previous => ({
+      ...previous,
+      patient_id: String(patient.id),
+      patient_name: patient.name || ""
+    }));
+    setPatientSearch("");
+  };
+  const filteredPatients = patients.filter(patient => {
+    const term = patientSearch.trim().toLowerCase();
+    if (!term) return true;
+    const name = String(patient.name || "").toLowerCase();
+    const pid = String(patient.id || "").toLowerCase();
+    return name.includes(term) || pid.includes(term);
+  });
+
+  /* ADD WALK-IN TO QUEUE */
+
+  const addWalkIn = async event => {
+    event.preventDefault();
+    if (!walkInForm.patient_id) {
+      window.alert("Please select a patient.");
+      return;
+    }
+    if (!walkInForm.service) {
+      window.alert("Please select a service.");
+      return;
+    }
+    try {
+      setWalkInSubmitting(true);
+      const response = await axios.post(API_BASE_URL + "/queue/walk-in", {
+        patient_id: walkInForm.patient_id,
+        patient_name: walkInForm.patient_name,
+        service: walkInForm.service,
+        reason: walkInForm.reason,
+        priority: walkInForm.priority
+      }, {
+        headers: {
+          Authorization: `Bearer ${getToken()}`
+        }
+      });
+      window.alert(response.data?.message || "Walk-in patient added to queue.");
+      setShowWalkInModal(false);
+      setWalkInForm({
+        patient_id: "",
+        patient_name: "",
+        service: "",
+        reason: "",
+        priority: "Normal"
+      });
+      await fetchQueue();
+    } catch (err) {
+      console.error("Add walk-in error:", err);
+      if (!err?.nativeAlertHandled) window.alert(err.response?.data?.message || "Unable to add walk-in patient.");
+    } finally {
+      setWalkInSubmitting(false);
+    }
+  };
+
+  /* Keep the queue updated without manually reloading the page. */
+  useAutoRefresh(fetchQueue);
+
+  /* OPEN TREATMENT COMPLETION FORM */
+
+  const openTreatmentModal = patient => {
+    setTreatmentPatient(patient);
+    setShowTreatmentModal(true);
+  };
+
+  /* CLOSE TREATMENT COMPLETION FORM */
+
+  const closeTreatmentModal = () => {
+    setShowTreatmentModal(false);
+    setTreatmentPatient(null);
+  };
+
+  /* QUEUE ACTION */
+
+  const queueAction = async (id, action) => {
+    try {
+      await axios.put(`${API_BASE_URL}/queue/${id}/${action}`, {}, {
+        headers: {
+          Authorization: `Bearer ${getToken()}`
+        }
+      });
+      fetchQueue();
+    } catch (err) {
+      console.error(`Queue ${action} error:`, err);
+      if (!err?.nativeAlertHandled) window.alert(err.response?.data?.message || "Unable to update queue.");
+    }
+  };
+
+  /* CALL NEXT PATIENT */
+
+  const callNextPatient = async () => {
+    if (calledCount > 0 || treatmentCount > 0) {
+      window.alert("A patient is already called or in treatment.");
+      return;
+    }
+    try {
+      setCallingNext(true);
+      const response = await axios.post(API_BASE_URL + "/queue/call-next", {}, {
+        headers: {
+          Authorization: `Bearer ${getToken()}`
+        }
+      });
+      window.alert(response.data?.message || "Next patient called successfully.");
+      await fetchQueue();
+    } catch (err) {
+      console.error("Call next error:", err);
+      if (!err?.nativeAlertHandled) window.alert(err.response?.data?.message || "Unable to call the next patient.");
+    } finally {
+      setCallingNext(false);
+    }
+  };
+
+  /* COUNTS */
+
+  const waitingCount = queue.filter(item => item.status === "Waiting").length;
+  const calledCount = queue.filter(item => item.status === "Called").length;
+  const treatmentCount = queue.filter(item => item.status === "In Treatment").length;
+  const completedCount = queue.filter(item => item.status === "Completed").length;
+
+  /* STATUS CLASS */
+
+  const statusClass = status => {
+    return status.toLowerCase().replace(/\s+/g, "-");
+  };
+  return <div className="queue-page">
+      {/* HEADER */}
+
+      <div className="queue-header">
+        <div>
+          <h1>Today's Queue</h1>
+
+          <p className="queue-description">
+            Manage appointments and walk-in patients.
+          </p>
+        </div>
+
+        <div className="queue-header-actions">
+          <button className="call-next-button" onClick={callNextPatient} disabled={callingNext || calledCount > 0 || treatmentCount > 0 || waitingCount === 0}>
+            <FaPhone />
+
+            {callingNext ? "Calling..." : "Call Next"}
+          </button>
+
+          <button className="walk-in-button" onClick={openWalkInModal}>
+            <FaUserPlus />
+            Add Walk-in
+          </button>
+        </div>
+      </div>
+
+      {/* STATISTICS */}
+
+      <div className="queue-stats">
+        <div className="queue-stat-card">
+          <div className="queue-stat-icon waiting">
+            <FaUsers />
+          </div>
+
+          <div>
+            <span>Waiting</span>
+
+            <strong>{waitingCount}</strong>
+          </div>
+        </div>
+
+        <div className="queue-stat-card">
+          <div className="queue-stat-icon called">
+            <FaPhone />
+          </div>
+
+          <div>
+            <span>Called</span>
+
+            <strong>{calledCount}</strong>
+          </div>
+        </div>
+
+        <div className="queue-stat-card">
+          <div className="queue-stat-icon treatment">
+            <FaPlay />
+          </div>
+
+          <div>
+            <span>In Treatment</span>
+
+            <strong>{treatmentCount}</strong>
+          </div>
+        </div>
+
+        <div className="queue-stat-card">
+          <div className="queue-stat-icon completed">
+            <FaCheck />
+          </div>
+
+          <div>
+            <span>Completed</span>
+
+            <strong>{completedCount}</strong>
+          </div>
+        </div>
+      </div>
+
+      {/* NOW SERVING */}
+
+      {(calledCount > 0 || treatmentCount > 0) && <div className="now-serving-card">
+          <div className="now-serving-icon">
+            <FaPhone />
+          </div>
+
+          <div className="now-serving-content">
+            <span className="now-serving-label">NOW SERVING</span>
+
+            {queue.filter(item => item.status === "Called" || item.status === "In Treatment").slice(0, 1).map(item => <div className="now-serving-patient" key={item.id}>
+                  <strong>#{item.queue_number}</strong>
+
+                  <div>
+                    <h2>{item.patient_name}</h2>
+
+                    <p>
+                      {item.queue_type}
+                      {" • "}
+                      {item.service || "Dental Service"}
+                      {" • "}
+                      {item.priority}
+                    </p>
+                  </div>
+                </div>)}
+          </div>
+
+          <div className={`now-serving-status ${treatmentCount > 0 ? "treatment" : "called"}`}>
+            {treatmentCount > 0 ? "In Treatment" : "Called"}
+          </div>
+        </div>}
+
+      {/* QUEUE */}
+
+      <div className="queue-container">
+        <div className="queue-container-header">
+          <div>
+            <h2>Patient Queue</h2>
+
+            <p>Today's clinic queue</p>
+          </div>
+
+          <button className="refresh-button" onClick={fetchQueue}>
+            Refresh
+          </button>
+        </div>
+
+        {loading ? <div className="queue-message">Loading queue...</div> : error ? null : queue.length === 0 ? <div className="queue-empty">
+            <div className="queue-empty-icon">
+              <FaUsers />
+            </div>
+
+            <h3>No patients in queue</h3>
+
+            <p>Check in an appointment or add a walk-in patient.</p>
+          </div> : <div className="queue-table-wrapper">
+            <table className="queue-table">
+              <thead>
+                <tr>
+                  <th>Queue</th>
+
+                  <th>Patient</th>
+
+                  <th>Type</th>
+
+                  <th>Service</th>
+
+                  <th>Priority</th>
+
+                  <th>Status</th>
+
+                  <th>Action</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {queue.map(item => <tr key={item.id}>
+                    <td>
+                      <div className="queue-number">#{item.queue_number}</div>
+                    </td>
+
+                    <td>
+                      <div className="queue-patient">
+                        <strong>{item.patient_name}</strong>
+
+                        <small>{item.reason || "No reason provided"}</small>
+                      </div>
+                    </td>
+
+                    <td>
+                      <span className={`queue-type ${item.queue_type === "Walk-in" ? "walk-in" : "appointment"}`}>
+                        {item.queue_type === "Walk-in" ? <FaWalking /> : <FaCalendarCheck />}
+
+                        {item.queue_type}
+                      </span>
+                    </td>
+
+                    <td>{item.service || "—"}</td>
+
+                    <td>
+                      <span className={`priority ${item.priority.toLowerCase()}`}>
+                        {item.priority}
+                      </span>
+                    </td>
+
+                    <td>
+                      <span className={`queue-status ${statusClass(item.status)}`}>
+                        {item.status}
+                      </span>
+                    </td>
+
+                    <td>
+                      <div className="queue-actions">
+                        {item.status === "Waiting" && <>
+                            <button className="action-call" title="Call patient" onClick={() => queueAction(item.id, "call")}>
+                              <FaPhone />
+                              Call
+                            </button>
+
+                            <button className="action-skip" title="Skip patient" onClick={() => queueAction(item.id, "skip")}>
+                              <FaForward />
+                            </button>
+                          </>}
+
+                        {item.status === "Called" && <button className="action-start" onClick={() => queueAction(item.id, "start")}>
+                            <FaPlay />
+                            Start
+                          </button>}
+
+                        {item.status === "In Treatment" && <button className="action-complete" onClick={() => openTreatmentModal(item)}>
+                            <FaCheck />
+                            Complete
+                          </button>}
+
+                        {(item.status === "Waiting" || item.status === "Called") && <button className="action-cancel" title="Cancel" onClick={() => queueAction(item.id, "cancel")}>
+                            <FaTimes />
+                          </button>}
+                      </div>
+                    </td>
+                  </tr>)}
+              </tbody>
+            </table>
+          </div>}
+      </div>
+
+      {/* TREATMENT / VISIT RECORD MODAL */}
+
+      {showTreatmentModal && treatmentPatient && <TreatmentVisitModal patient={treatmentPatient} onClose={closeTreatmentModal} onCompleted={async () => {
+      await fetchQueue();
+    }} />}
+
+      {/* WALK-IN MODAL */}
+
+      {showWalkInModal && <div className="walk-in-modal-overlay" onClick={() => setShowWalkInModal(false)}>
+          <div className="walk-in-modal" onClick={event => event.stopPropagation()}>
+            <div className="walk-in-modal-header">
+              <div>
+                <p className="walk-in-modal-label">CLINIC QUEUE</p>
+
+                <h2>Add Walk-in Patient</h2>
+
+                <p>Add a patient directly to today's queue.</p>
+              </div>
+
+              <button type="button" className="walk-in-close" onClick={() => setShowWalkInModal(false)}>
+                <FaTimes />
+              </button>
+            </div>
+
+            <form className="walk-in-form" onSubmit={addWalkIn}>
+              {/* PATIENT */}
+
+              <div className="walk-in-form-group">
+                <label>Patient</label>
+
+                <div className="walk-in-patient-combobox">
+                  <input type="text" className="walk-in-patient-search" value={patientSearch || (walkInForm.patient_id ? `${walkInForm.patient_name} (PID: ${walkInForm.patient_id})` : "")} onChange={event => {
+                setPatientSearch(event.target.value);
+                if (walkInForm.patient_id) {
+                  setWalkInForm(previous => ({
+                    ...previous,
+                    patient_id: "",
+                    patient_name: ""
+                  }));
+                }
+              }} placeholder="Search patient name or PID..." autoComplete="off" disabled={patientsLoading} />
+                  {(patientSearch || !walkInForm.patient_id) && <div className="walk-in-patient-results">
+                      {patientsLoading ? <div className="walk-in-patient-result muted">
+                          Loading patients...
+                        </div> : filteredPatients.length > 0 ? filteredPatients.slice(0, 50).map(patient => <button key={patient.id} type="button" className="walk-in-patient-result" onClick={() => selectWalkInPatient(patient)}>
+                            <span>{patient.name}</span>
+                            <small>PID: {patient.id}</small>
+                          </button>) : <div className="walk-in-patient-result muted">
+                          No matching patients found.
+                        </div>}
+                    </div>}
+                </div>
+              </div>
+
+              {/* SERVICE */}
+
+              <div className="walk-in-form-group">
+                <label>Services (select multiple)</label>
+                <MultiServiceSelect idPrefix="walkin-service" value={walkInForm.service}
+                  onChange={value => setWalkInForm(previous => ({ ...previous, service: value }))} />
+              </div>
+
+              {/* REASON */}
+
+              <div className="walk-in-form-group">
+                <label>Reason for Visit</label>
+
+                <textarea name="reason" value={walkInForm.reason} onChange={handleWalkInChange} placeholder="Enter reason for visit..." rows="3" />
+              </div>
+
+              {/* PRIORITY */}
+
+              <div className="walk-in-form-group">
+                <label>Priority</label>
+
+                <div className="priority-options">
+                  <label className="priority-option">
+                    <input type="radio" name="priority" value="Normal" checked={walkInForm.priority === "Normal"} onChange={handleWalkInChange} />
+
+                    <span>Normal</span>
+                  </label>
+
+                  <label className="priority-option urgent">
+                    <input type="radio" name="priority" value="Urgent" checked={walkInForm.priority === "Urgent"} onChange={handleWalkInChange} />
+
+                    <span>Urgent</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* ACTIONS */}
+
+              <div className="walk-in-form-actions">
+                <button type="button" className="walk-in-cancel" onClick={() => setShowWalkInModal(false)}>
+                  Cancel
+                </button>
+
+                <button type="submit" className="walk-in-submit" disabled={walkInSubmitting}>
+                  {walkInSubmitting ? "Adding..." : "Add to Queue"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>}
+    </div>;
+}
+export default QueueManagement;

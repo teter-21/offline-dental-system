@@ -1,0 +1,194 @@
+import { endSession } from "../utils/session.js";
+import React, { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  FaTachometerAlt,
+  FaUserPlus,
+  FaUsers,
+  FaCog,
+  FaSignOutAlt,
+  FaCalendarAlt,
+  FaListOl,
+  FaMoneyBillWave,
+  FaChartBar,
+} from "react-icons/fa";
+import dentalLogo from "../assets/images/60x60modal-logo.png";
+import api from "../api";
+function Sidebar() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [account, setAccount] = useState(null);
+  useEffect(() => {
+    let mounted = true;
+    const loadAccount = async () => {
+      try {
+        const response = await api.get("/account");
+        if (mounted) setAccount(response.data);
+      } catch (error) {
+        console.error("Sidebar account error:", error);
+      }
+    };
+    loadAccount();
+    const handleDataUpdated = () => loadAccount();
+    window.addEventListener("clinic:data-updated", handleDataUpdated);
+    window.addEventListener("focus", loadAccount);
+    return () => {
+      mounted = false;
+      window.removeEventListener("clinic:data-updated", handleDataUpdated);
+      window.removeEventListener("focus", loadAccount);
+    };
+  }, []);
+  const handleLogout = async () => {
+    try {
+      await endSession();
+      navigate("/login");
+    } catch (error) {
+      if (!error?.nativeAlertHandled) window.alert(error.message);
+    }
+  };
+  const isActive = (path) => {
+    return location.pathname === path;
+  };
+  return (
+    <aside className="sidebar">
+      {/* LOGO */}
+
+      <div className="sidebar-logo">
+        <img
+          src={dentalLogo}
+          alt="Magno Dental Clinic"
+          className="sidebar-logo-image"
+        />
+
+        <div className="sidebar-brand">
+          <h2>Magno Dental</h2>
+
+          <span>CLINIC MANAGEMENT</span>
+        </div>
+      </div>
+
+      {/* MENU */}
+
+      <div className="sidebar-section-title">MAIN MENU</div>
+
+      <ul className="sidebar-menu">
+        {/* Dashboard */}
+
+        <li className={isActive("/Dashboard") ? "active" : ""}>
+          <Link to="/Dashboard">
+            <span className="menu-icon">
+              <FaTachometerAlt />
+            </span>
+
+            <span>Dashboard</span>
+          </Link>
+        </li>
+
+        {/* Add Patient */}
+
+        <li className={isActive("/AddPatient") ? "active" : ""}>
+          <Link to="/AddPatient">
+            <span className="menu-icon">
+              <FaUserPlus />
+            </span>
+
+            <span>Add Patient</span>
+          </Link>
+        </li>
+
+        {/* Queue */}
+
+        <li className={location.pathname === "/Queue" ? "active" : ""}>
+          <Link to="/Queue">
+            <span className="menu-icon">
+              <FaListOl />
+            </span>
+
+            <span>Queue</span>
+          </Link>
+        </li>
+
+        {/* Patient Management */}
+
+        <li className={isActive("/PatientMngmt") ? "active" : ""}>
+          <Link to="/PatientMngmt">
+            <span className="menu-icon">
+              <FaUsers />
+            </span>
+
+            <span>Patients</span>
+          </Link>
+        </li>
+
+        {/* Reports */}
+
+        <li className={isActive("/Report") ? "active" : ""}>
+          <Link to="/Report">
+            <span className="menu-icon">
+              <FaChartBar />
+            </span>
+
+            <span>Reports</span>
+          </Link>
+        </li>
+
+        {/* Billing */}
+
+        <li className={isActive("/Payment") ? "active" : ""}>
+          <Link to="/Payment">
+            <span className="menu-icon">
+              <FaMoneyBillWave />
+            </span>
+
+            <span>Billing</span>
+          </Link>
+        </li>
+      </ul>
+
+      {/* SYSTEM */}
+
+      <div className="sidebar-section-title system-title">SYSTEM</div>
+
+      <ul className="sidebar-menu">
+        <li className={isActive("/Settings") ? "active" : ""}>
+          <Link to="/Settings">
+            <span className="menu-icon">
+              <FaCog />
+            </span>
+
+            <span>Settings</span>
+          </Link>
+        </li>
+      </ul>
+
+      {/* ADMIN CARD */}
+
+      <div className="sidebar-bottom">
+        <div
+          className="sidebar-admin-card"
+          title={account?.fullname || "Administrator"}
+        >
+          <div className="admin-avatar">
+            {(account?.fullname || "Administrator")
+              .trim()
+              .charAt(0)
+              .toUpperCase()}
+          </div>
+
+          <div className="admin-details">
+            <h4>{account?.fullname || "Administrator"}</h4>
+
+            <span>Administrator</span>
+          </div>
+        </div>
+
+        <button className="sidebar-logout" onClick={handleLogout}>
+          <FaSignOutAlt />
+
+          <span>Logout</span>
+        </button>
+      </div>
+    </aside>
+  );
+}
+export default Sidebar;
