@@ -9,6 +9,7 @@ import {
 import MainLayout from "./layout/MainLayout.jsx";
 import AuthLayout from "./layout/AuthLayout.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import "./utils/electronDialogFocus.js";
 
 const Login = lazy(() => import("./pages/auth/Login.jsx"));
 const Dashboard = lazy(() => import("./pages/admin/Dashboard.jsx"));

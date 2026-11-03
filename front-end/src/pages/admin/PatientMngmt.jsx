@@ -51,7 +51,9 @@ function PatientMngmt() {
     return () => clearTimeout(timer);
   }, [loadPatients]);
   useAutoRefresh(loadPatients);
-  const handleUpdatePatient = () => loadPatients();
+  const handleUpdatePatient = () => {
+    window.dispatchEvent(new Event("clinic:data-updated"));
+  };
   const totalPages = pageInfo.totalPages;
   const safeCurrentPage = pageInfo.page;
   const indexOfFirst = (safeCurrentPage - 1) * recordsPerPage;

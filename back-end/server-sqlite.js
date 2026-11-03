@@ -205,6 +205,22 @@ app.get("/health/ready", (req, res) => {
 
 app.get("/patient-images/:id", auth, getPatientImage);
 
+/* ============================================
+   ELECTRON ADMINISTRATOR AUTHORIZATION
+   ============================================ */
+
+// Used only by the local Electron application.
+// This endpoint does not execute backups,
+// restores, or filesystem operations.
+
+if (process.env.MAGNO_DESKTOP_MODE === "1") {
+  app.post("/desktop/authorize", auth, (req, res) => {
+    return res.json({
+      authorized: true,
+    });
+  });
+}
+
 // Never expose private uploads as static files.
 app.use("/uploads", (req, res) => {
   return res.status(404).json({

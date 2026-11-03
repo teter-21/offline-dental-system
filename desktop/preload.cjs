@@ -1,14 +1,22 @@
 "use strict";
 
-const { contextBridge } = require("electron");
+const { contextBridge, ipcRenderer } = require("electron");
 
-// Development-only desktop identification.
-// Privileged Backup and Restore operations
-// will be introduced after administrator
-// verification and process lifecycle handling.
 contextBridge.exposeInMainWorld(
   "magnoDesktop",
   Object.freeze({
     isDesktop: true,
+
+    createBackup: ({ token } = {}) => {
+      return ipcRenderer.invoke("magno:create-backup", { token });
+    },
+
+    restoreBackup: ({ token } = {}) => {
+      return ipcRenderer.invoke("magno:restore-backup", { token });
+    },
+
+    restoreInputFocus: () => {
+      ipcRenderer.send("magno:restore-input-focus");
+    },
   }),
 );
