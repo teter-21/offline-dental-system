@@ -1,4 +1,27 @@
 {
+  "name": "magno-dental-desktop-migration",
+  "version": "0.1.0",
+  "description": "Offline desktop dental management system for Magno Dental Clinic, built with Electron, React, Express, and SQLite.",
+  "private": true,
+  "main": "desktop/main.cjs",
+  "type": "commonjs",
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "scripts": {
+    "start": "node back-end/server-sqlite.js",
+    "migrate:deploy": "node back-end/scripts/migrateDeployment.js",
+    "test": "node --test back-end/tests/*.test.js",
+    "build:ui": "npm --prefix front-end run build",
+    "build:ui:desktop": "npm --prefix front-end run build -- --mode desktop",
+    "desktop:dev": "electron .",
+    "desktop:preview": "cross-env MAGNO_PREVIEW_BUILD=1 electron .",
+    "desktop:pack": "electron-builder --dir --win --x64",
+    "desktop:dist": "electron-builder --win nsis --x64",
+    "desktop:postinstall": "electron-builder install-app-deps"
+  },
   "dependencies": {
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.11.1",
@@ -9,47 +32,61 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.4.0",
-    "mysql": "^2.18.1",
-    "mysql2": "^3.24.5",
-    "react-icons": "^5.6.0",
-    "react-router-dom": "^7.18.4",
     "sharp": "^0.35.5"
   },
-  "scripts": {
-    "start": "node back-end/server-sqlite.js",
-    "migrate:deploy": "node back-end/scripts/migrateDeployment.js",
-    "test": "node --test back-end/tests/*.test.js",
-    "build:ui": "npm --prefix front-end run build",
-    "build:ui:desktop": "npm --prefix front-end run build -- --mode desktop",
-    "desktop:dev": "electron .",
-    "desktop:dist": "electron-builder --win nsis --x64",
-    "desktop:postinstall": "electron-builder install-app-deps"
-  },
-  "engines": {
-    "node": ">=22 <25"
-  },
-  "name": "magno-dental-desktop-migration",
-  "version": "0.1.0",
-  "private": true,
-  "main": "desktop/main.cjs",
   "devDependencies": {
     "electron": "^39.8.10",
-    "electron-builder": "^26.0.0"
+    "electron-builder": "^26.0.0",
+    "cross-env": "^7.0.3"
   },
   "build": {
     "appId": "com.magno.dental.desktop",
     "productName": "Magno Dental Management",
+    "asar": true,
+    "npmRebuild": true,
+    "nodeGypRebuild": false,
     "directories": {
       "output": "release"
     },
     "files": [
-      "desktop/**/*",
+      "desktop/**/*.cjs",
       "front-end/dist/**/*",
+      "back-end/**/*.js",
       "package.json",
-      "node_modules/**/*"
+      "node_modules/**/*",
+      "!back-end/tests/**",
+      "!back-end/scripts/**",
+      "!back-end/data/**",
+      "!back-end/storage/**",
+      "!back-end/backups/**",
+      "!back-end/recovery/**",
+      "!**/*.db",
+      "!**/*.db-wal",
+      "!**/*.db-shm",
+      "!**/*.db-journal",
+      "!**/*.sqlite",
+      "!**/*.sqlite-wal",
+      "!**/*.sqlite-shm",
+      "!**/.env",
+      "!**/.env.*",
+      "!**/*.pem",
+      "!**/*.key",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "packaging/seed",
+        "to": "seed",
+        "filter": [
+          "clinic_initial.db"
+        ]
+      }
     ],
     "asarUnpack": [
-      "node_modules/better-sqlite3/**/*"
+      "node_modules/better-sqlite3/**/*",
+      "node_modules/bcrypt/**/*",
+      "node_modules/sharp/**/*",
+      "node_modules/@img/**/*"
     ],
     "win": {
       "target": [
@@ -68,14 +105,17 @@
       "artifactName": "Magno-Dental-Setup-${version}.${ext}"
     }
   },
-  "description": "This refactored copy retains the **eight requested core modules**. It was modified directly from the supplied `finalcap(testing).zip` source.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/teter-21/offline-dental-system.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "dental-management",
+    "electron",
+    "sqlite",
+    "offline-desktop",
+    "react"
+  ],
   "bugs": {
     "url": "https://github.com/teter-21/offline-dental-system/issues"
   },

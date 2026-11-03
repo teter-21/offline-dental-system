@@ -1,5 +1,9 @@
 "use strict";
 
+const { initializeClinicData } = require("./first-run.cjs");
+
+const { getOrCreateJwtSecret } = require("./runtime-secret.cjs");
+
 const {
   app,
   BrowserWindow,
@@ -22,7 +26,7 @@ const FRONTEND_DIST = path.join(ROOT, "front-end", "dist");
 const PORT = 3001;
 const BACKEND_URL = `http://127.0.0.1:${PORT}`;
 
-const PREVIEW_BUILD = process.env.MAGNO_PREVIEW_BUILD === "1";
+const PREVIEW_BUILD = app.isPackaged || process.env.MAGNO_PREVIEW_BUILD === "1";
 
 const FRONTEND_URL = PREVIEW_BUILD ? BACKEND_URL : "http://127.0.0.1:5173";
 
@@ -68,10 +72,17 @@ function backendEnv() {
 
   return {
     ...process.env,
+
+    // Unique secret persisted for this installation.
+    JWT_SECRET: getOrCreateJwtSecret(app),
+
     PORT: String(PORT),
     FRONTEND_URL,
+
     MAGNO_DESKTOP_MODE: "1",
+
     MAGNO_SERVE_BUILT_UI: PREVIEW_BUILD ? "1" : "0",
+
     SQLITE_DB_PATH: paths.database,
     PATIENT_IMAGES_DIR: paths.images,
     MAGNO_BACKUP_DIR: paths.backups,
@@ -112,7 +123,7 @@ function startBackend() {
   }
 
   const child = utilityProcess.fork(BACKEND_SCRIPT, [], {
-    cwd: BACKEND_DIR,
+    cwd: app.getPath("userData"),
     stdio: "pipe",
     serviceName: "Magno Dental SQLite Backend",
     env: backendEnv(),
@@ -595,15 +606,21 @@ function createWindow() {
    ============================================ */
 
 async function startDesktop() {
-  if (app.isPackaged) {
-    throw new Error("Installer packaging is not configured yet.");
-  }
-
   app.setAppUserModelId("com.magno.dental.desktop");
 
   if (PREVIEW_BUILD && !fs.existsSync(path.join(FRONTEND_DIST, "index.html"))) {
     throw new Error("React build missing. Run npm run build:ui:desktop.");
   }
+
+  // Initialize a first-time installation,
+  // or reuse the existing AppData database.
+  const clinicState = initializeClinicData(app);
+
+  console.log(
+    clinicState.firstRun
+      ? "New clinic database initialized."
+      : "Existing clinic database found.",
+  );
 
   await checkPort();
 
