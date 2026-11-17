@@ -12,7 +12,6 @@ const indexes = [
     "idx_appointments_status_date",
     "status, preferred_date, preferred_time",
   ],
-  ["queue", "idx_queue_today", "queue_date, status, priority, queue_number"],
   ["password_reset_tokens", "idx_reset_hash", "token_hash"],
 ];
 (async () => {

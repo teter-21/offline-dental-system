@@ -1,5 +1,5 @@
 const { getSQLite } = require("../config/sqlite");
-const bcrypt = require("bcrypt");
+const { hashPassword, verifyPassword } = require("../services/passwordHash");
 const { issueSession } = require("../services/sessionSecurity");
 const { passwordError } = require("../services/passwordPolicy");
 
@@ -18,7 +18,7 @@ exports.login = async (req, res) => {
     !emailValue ||
     !password ||
     emailValue.length > 100 ||
-    Buffer.byteLength(password, "utf8") > 72
+    typeof req.body?.password !== "string"
   ) {
     return res.status(400).json({
       message: "Email and password are required.",
@@ -39,7 +39,7 @@ exports.login = async (req, res) => {
       )
       .get(emailValue);
 
-    const match = await bcrypt.compare(
+    const match = await verifyPassword(
       password,
       user?.password || DUMMY_LOGIN_HASH,
     );
@@ -144,12 +144,6 @@ exports.updateMyAccount = async (req, res) => {
   const changingPassword =
     typeof newPassword === "string" && newPassword.length > 0;
 
-  if (changingPassword && Buffer.byteLength(newPassword, "utf8") > 72) {
-    return res.status(400).json({
-      message: "Password is too long.",
-    });
-  }
-
   if (changingPassword) {
     const validationError = passwordError(newPassword);
 
@@ -190,7 +184,7 @@ exports.updateMyAccount = async (req, res) => {
         });
       }
 
-      const matches = await bcrypt.compare(
+      const matches = await verifyPassword(
         String(currentPassword),
         user.password,
       );
@@ -221,7 +215,7 @@ exports.updateMyAccount = async (req, res) => {
     }
 
     const hashedPassword = changingPassword
-      ? await bcrypt.hash(newPassword, 12)
+      ? await hashPassword(newPassword)
       : null;
 
     const updateAccount = db.transaction(() => {

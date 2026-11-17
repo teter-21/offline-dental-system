@@ -1,120 +1,126 @@
-import { getAccessToken } from "../utils/session.js";
-import API_BASE_URL from "../config/apiBase.js";
 import React, { useEffect, useState } from "react";
+import api from "../api";
 import MultiServiceSelect from "./MultiServiceSelect";
-import axios from "axios";
 import "../css/TreatmentVisitModal.css";
-function getToday() {
+
+const localDate = () => {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-function getCurrentTime() {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+};
+const localTime = () => {
   const now = new Date();
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-  return `${hours}:${minutes}`;
-}
-function TreatmentVisitModal({ patient, onClose, onCompleted }) {
-  const [formData, setFormData] = useState({
-    visit_date: getToday(),
-    visit_time: getCurrentTime(),
-    procedure_name: patient?.service || "",
-    complain: patient?.reason || "",
-    description: "",
-    amount_paid: "",
-    balance: "",
-  });
-  const [saving, setSaving] = useState(false);
-  useEffect(() => {
-    setFormData({
-      visit_date: getToday(),
-      visit_time: getCurrentTime(),
-      procedure_name: patient?.service || "",
-      complain: patient?.reason || "",
-      description: "",
-      amount_paid: "",
-      balance: "",
-    });
-  }, [patient]);
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setFormData((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
+  return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+};
+
+function defaultValues(patient, visit) {
+  return {
+    visit_date: visit?.visit_date?.slice(0, 10) || localDate(),
+    visit_time: visit?.visit_time?.slice(0, 5) || localTime(),
+    procedure_name: visit?.procedure_name ?? patient?.service ?? "",
+    complain: visit?.complain ?? patient?.complain ?? patient?.reason ?? "",
+    description: visit?.description ?? "",
+    amount_paid: visit?.amount_paid == null ? "" : String(visit.amount_paid),
+    balance: visit?.balance == null ? "" : String(visit.balance),
   };
+}
+
+/** Existing visit form, used for either creating a patient visit or editing it. */
+function TreatmentVisitModal({
+  patient,
+  initialVisit = null,
+  onClose,
+  onCompleted,
+}) {
+  const isEdit = Boolean(initialVisit?.id);
+  const [formData, setFormData] = useState(() =>
+    defaultValues(patient, initialVisit),
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setFormData(defaultValues(patient, initialVisit));
+    setError("");
+    // Reset only when a different patient/visit is selected.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patient?.id, initialVisit?.id]);
+
+  if (!patient?.id) return null;
+  const name = patient.name || patient.patient_name || "Patient";
+
+  const handleChange = (event) => {
+    const { name: field, value } = event.target;
+    setFormData((previous) => ({ ...previous, [field]: value }));
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (
       !formData.visit_date ||
       !formData.visit_time ||
-      !formData.procedure_name
+      !formData.procedure_name.trim()
     ) {
-      window.alert(
-        "Please complete the date, time, and select at least one service.",
-      );
+      setError("Date, time, and at least one service are required.");
       return;
     }
+    if (
+      ["amount_paid", "balance"].some(
+        (field) =>
+          formData[field] !== "" &&
+          (!Number.isFinite(Number(formData[field])) ||
+            Number(formData[field]) < 0),
+      )
+    ) {
+      setError("Payment amounts must be non-negative numbers.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
     try {
-      setSaving(true);
-      const token = getAccessToken();
-      const response = await axios.post(
-        `${API_BASE_URL}/queue/${patient.id}/complete-treatment`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
-      window.alert(
-        response.data?.message || "Treatment completed and visit saved.",
-      );
-      if (onCompleted) {
-        await onCompleted();
-      }
+      const payload = { ...formData, patient_id: patient.id };
+      const response = isEdit
+        ? await api.put(`/visits/${initialVisit.id}`, payload)
+        : await api.post("/add-visit", payload);
+      await onCompleted?.(response.data);
       onClose();
-    } catch (error) {
-      console.error("Complete treatment error:", error);
-      if (!error?.nativeAlertHandled)
-        window.alert(
-          error.response?.data?.message || "Unable to complete treatment.",
-        );
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Unable to save the visit record.",
+      );
     } finally {
       setSaving(false);
     }
   };
-  if (!patient) {
-    return null;
-  }
+
   return (
-    <div className="treatment-modal-overlay" onMouseDown={onClose}>
+    <div
+      className="treatment-modal-overlay"
+      onMouseDown={() => !saving && onClose()}
+    >
       <div
         className="treatment-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={isEdit ? "Edit Visit Record" : "Save Visit Record"}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="treatment-modal-header">
           <div>
-            <span className="treatment-modal-label">COMPLETE TREATMENT</span>
-
-            <h2>Save Visit Record</h2>
-
+            <span className="treatment-modal-label">
+              {isEdit ? "CORRECT TREATMENT HISTORY" : "PATIENT TREATMENT"}
+            </span>
+            <h2>{isEdit ? "Edit Visit Record" : "Save Visit Record"}</h2>
             <p>
-              Queue #{patient.queue_number}
-              {" • "}
-              {patient.patient_name}
+              Patient #{patient.id} • {name}
             </p>
           </div>
-
           <button
             type="button"
             className="treatment-close"
             onClick={onClose}
             disabled={saving}
+            aria-label="Close visit form"
           >
             ×
           </button>
@@ -123,51 +129,51 @@ function TreatmentVisitModal({ patient, onClose, onCompleted }) {
         <div className="treatment-patient-summary">
           <div>
             <span>Patient</span>
-            <strong>{patient.patient_name}</strong>
+            <strong>{name}</strong>
           </div>
-
           <div>
-            <span>Queue Type</span>
-            <strong>{patient.queue_type}</strong>
+            <span>Patient ID</span>
+            <strong>P{String(patient.id).padStart(3, "0")}</strong>
           </div>
-
           <div>
-            <span>Service</span>
-            <strong>{patient.service || "Dental Service"}</strong>
+            <span>Record</span>
+            <strong>
+              {isEdit ? `Visit #${initialVisit.id}` : "New visit"}
+            </strong>
           </div>
         </div>
 
         <form className="treatment-form" onSubmit={handleSubmit}>
           <div className="treatment-form-row">
             <div className="treatment-form-group">
-              <label>Visit Date</label>
-
+              <label htmlFor="visit-date">Visit Date</label>
               <input
+                id="visit-date"
                 type="date"
                 name="visit_date"
                 value={formData.visit_date}
                 onChange={handleChange}
                 required
+                disabled={saving}
               />
             </div>
-
             <div className="treatment-form-group">
-              <label>Visit Time</label>
-
+              <label htmlFor="visit-time">Visit Time</label>
               <input
+                id="visit-time"
                 type="time"
                 name="visit_time"
                 value={formData.visit_time}
                 onChange={handleChange}
                 required
+                disabled={saving}
               />
             </div>
           </div>
-
           <div className="treatment-form-group">
             <label>Services Performed (select one or more)</label>
             <MultiServiceSelect
-              idPrefix={`treatment-service-${patient.id}`}
+              idPrefix={`visit-service-${patient.id}`}
               value={formData.procedure_name}
               onChange={(value) =>
                 setFormData((previous) => ({
@@ -177,36 +183,35 @@ function TreatmentVisitModal({ patient, onClose, onCompleted }) {
               }
             />
           </div>
-
           <div className="treatment-form-group">
-            <label>Complaint</label>
-
+            <label htmlFor="visit-complaint">Complaint</label>
             <input
+              id="visit-complaint"
               type="text"
               name="complain"
               value={formData.complain}
               onChange={handleChange}
               placeholder="Patient complaint"
+              disabled={saving}
             />
           </div>
-
           <div className="treatment-form-group">
-            <label>Treatment / Description</label>
-
+            <label htmlFor="visit-description">Treatment / Description</label>
             <textarea
+              id="visit-description"
               name="description"
               value={formData.description}
               onChange={handleChange}
-              placeholder="Record the treatment performed, findings, or dentist notes..."
               rows="4"
+              disabled={saving}
+              placeholder="Treatment performed, findings, or dentist notes..."
             />
           </div>
-
           <div className="treatment-form-row">
             <div className="treatment-form-group">
-              <label>Amount Paid</label>
-
+              <label htmlFor="visit-paid">Amount Paid (₱)</label>
               <input
+                id="visit-paid"
                 type="number"
                 min="0"
                 step="0.01"
@@ -214,13 +219,13 @@ function TreatmentVisitModal({ patient, onClose, onCompleted }) {
                 value={formData.amount_paid}
                 onChange={handleChange}
                 placeholder="0.00"
+                disabled={saving}
               />
             </div>
-
             <div className="treatment-form-group">
-              <label>Balance</label>
-
+              <label htmlFor="visit-balance">Balance (₱)</label>
               <input
+                id="visit-balance"
                 type="number"
                 min="0"
                 step="0.01"
@@ -228,10 +233,21 @@ function TreatmentVisitModal({ patient, onClose, onCompleted }) {
                 value={formData.balance}
                 onChange={handleChange}
                 placeholder="0.00"
+                disabled={saving}
               />
             </div>
           </div>
-
+          {error && (
+            <p className="treatment-form-error" role="alert">
+              {error}
+            </p>
+          )}
+          {isEdit && (
+            <p className="treatment-form-note">
+              Payments already recorded in Billing are preserved. Amount Paid
+              cannot be lower than those payments.
+            </p>
+          )}
           <div className="treatment-form-actions">
             <button
               type="button"
@@ -241,9 +257,12 @@ function TreatmentVisitModal({ patient, onClose, onCompleted }) {
             >
               Cancel
             </button>
-
             <button type="submit" className="treatment-save" disabled={saving}>
-              {saving ? "Saving..." : "Complete & Save Visit"}
+              {saving
+                ? "Saving..."
+                : isEdit
+                  ? "Save Changes"
+                  : "Save Visit Record"}
             </button>
           </div>
         </form>
@@ -251,4 +270,5 @@ function TreatmentVisitModal({ patient, onClose, onCompleted }) {
     </div>
   );
 }
+
 export default TreatmentVisitModal;

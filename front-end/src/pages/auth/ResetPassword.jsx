@@ -31,8 +31,8 @@ function ResetPassword() {
   }, [token]);
   const handleSubmit = async e => {
     e.preventDefault();
-    if (password.length < 12) {
-      window.alert("Password must be at least 12 characters.");
+    if (password.length < 6) {
+      window.alert("Password must be at least 6 characters.");
       return;
     }
     if (password !== confirmPassword) {
@@ -67,10 +67,10 @@ function ResetPassword() {
             </p>
             <form onSubmit={handleSubmit}>
               <label>New Password</label>
-              <input type="password" value={password} placeholder="At least 12 characters" onChange={e => setPassword(e.target.value)} required />
+              <input type="password" value={password} placeholder="At least 6 characters" minLength={6} onChange={e => setPassword(e.target.value)} required />
 
               <label>Confirm Password</label>
-              <input type="password" value={confirmPassword} placeholder="Enter your password again" onChange={e => setConfirmPassword(e.target.value)} required />
+              <input type="password" value={confirmPassword} placeholder="Enter your password again" minLength={6} onChange={e => setConfirmPassword(e.target.value)} required />
 
               <button type="submit" className="password-submit" disabled={loading}>
                 {loading ? "Saving..." : "Change Password"}

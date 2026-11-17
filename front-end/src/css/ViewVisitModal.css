@@ -294,7 +294,7 @@
 
   border: 0;
 
-  border-radius:0px;
+  border-radius: 0px;
 
   background: #4f86c6;
 
@@ -367,5 +367,44 @@
   vertical-align: top;
   line-height: 1.6;
 }
-.viewv-modal .visit-table { min-width: 1050px; }
-.viewv-modal .visit-table th:nth-child(4) { width: 255px; }
+.viewv-modal .visit-table {
+  min-width: 1050px;
+}
+.viewv-modal .visit-table th:nth-child(4) {
+  width: 255px;
+}
+
+.viewv-modal .visit-table {
+  min-width: 930px;
+}
+.viewv-modal .visit-table th:last-child {
+  width: 75px;
+  text-align: center;
+}
+.viewv-modal .visit-table td:last-child {
+  text-align: center;
+}
+.viewv-modal .visit-edit-button {
+  border: 1px solid #4f86c6;
+  padding: 6px 12px;
+  color: #285b8b;
+  background: #edf5fd;
+  cursor: pointer;
+  font-weight: 600;
+}
+.viewv-modal .visit-edit-button:hover {
+  background: #dcecff;
+}
+.viewv-modal .visit-history-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  font-size: 12px;
+  color: #24425f;
+  font-weight: 600;
+}
+.viewv-modal .visit-history-error {
+  color: #b91c1c;
+  margin: 8px 0;
+}

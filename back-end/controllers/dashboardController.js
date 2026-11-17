@@ -29,25 +29,20 @@ exports.getDashboardSummary = (req, res) => {
       )
       .get();
 
-    const pending = db
-      .prepare(
-        `
-      SELECT COUNT(*) AS total
-      FROM appointments
-      WHERE status = 'Pending'
-    `,
-      )
-      .get();
+    const todayKey = clinicToday();
+    const monthStart = `${todayKey.slice(0, 7)}-01`;
+    const nextMonth = new Date(Date.UTC(
+      Number(todayKey.slice(0, 4)), Number(todayKey.slice(5, 7)), 1,
+    )).toISOString().slice(0, 10);
 
-    const today = db
-      .prepare(
-        `
-      SELECT COUNT(*) AS total
-      FROM appointments
-      WHERE preferred_date = ?
-    `,
-      )
-      .get(clinicToday());
+    const monthTreatments = db.prepare(`
+      SELECT COUNT(*) AS total FROM visits
+      WHERE visit_date >= ? AND visit_date < ?
+    `).get(monthStart, nextMonth);
+
+    const todayTreatments = db.prepare(`
+      SELECT COUNT(*) AS total FROM visits WHERE visit_date = ?
+    `).get(todayKey);
 
     const revenue = db
       .prepare(
@@ -60,8 +55,8 @@ exports.getDashboardSummary = (req, res) => {
 
     return res.json({
       totalPatients: Number(patients.total),
-      pendingAppointments: Number(pending.total),
-      todayAppointments: Number(today.total),
+      monthTreatments: Number(monthTreatments.total),
+      todayTreatments: Number(todayTreatments.total),
       totalRevenue: Number(revenue.total),
     });
   } catch (error) {

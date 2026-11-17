@@ -3,20 +3,27 @@ import React, { useState } from "react";
 import ViewVisitModal from "./ViewVisitModal";
 import EditPatientModal from "./EditPatientModal";
 import DentalChartModal from "./DentalChartModal";
-import { FaEye, FaEdit, FaTooth } from "react-icons/fa";
+import TreatmentVisitModal from "./TreatmentVisitModal";
+import { FaEye, FaEdit, FaTooth, FaPlus } from "react-icons/fa";
 import "../css/PatientRow.css";
 
-function PatientRow({ patient, onUpdatePatient, onImageClick }) {
+function PatientRow({ patient, onUpdatePatient, onSaveVisit, onImageClick }) {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDentalChart, setShowDentalChart] = useState(false);
+  const [showVisitForm, setShowVisitForm] = useState(false);
 
   return (
     <div className="table-row">
       <span>{patient.id}</span>
       <span>
-        <PatientImage image={patient.image} width="80" className="avatar" alt={patient.name}
-          onClick={() => onImageClick?.(patient.image)} />
+        <PatientImage
+          image={patient.image}
+          width="80"
+          className="avatar"
+          alt={patient.name}
+          onClick={() => onImageClick?.(patient.image)}
+        />
       </span>
       <span className="name">{patient.name}</span>
       <span className="muted">{patient.address}</span>
@@ -26,13 +33,65 @@ function PatientRow({ patient, onUpdatePatient, onImageClick }) {
       <span>{patient.status || "—"}</span>
       <span className="complaint">{patient.complain}</span>
       <span className="visit-actions">
-        <button type="button" className="view-btn" title="View Patient Visits" onClick={() => setShowViewModal(true)}><FaEye /></button>
-        <button type="button" className="dental-chart-btn" title="Dental Chart" onClick={() => setShowDentalChart(true)}><FaTooth /></button>
-        <button type="button" className="edit-btn" title="Edit Patient" onClick={() => setShowEditModal(true)}><FaEdit /></button>
+        <button
+          type="button"
+          className="add-record-btn"
+          title="Add visit record"
+          onClick={() => setShowVisitForm(true)}
+        >
+          <FaPlus />
+        </button>
+        <button
+          type="button"
+          className="view-btn"
+          title="View Patient Visits"
+          onClick={() => setShowViewModal(true)}
+        >
+          <FaEye />
+        </button>
+        <button
+          type="button"
+          className="dental-chart-btn"
+          title="Dental Chart"
+          onClick={() => setShowDentalChart(true)}
+        >
+          <FaTooth />
+        </button>
+        <button
+          type="button"
+          className="edit-btn"
+          title="Edit Patient"
+          onClick={() => setShowEditModal(true)}
+        >
+          <FaEdit />
+        </button>
       </span>
-      {showViewModal && <ViewVisitModal patient={patient} onClose={() => setShowViewModal(false)} />}
-      {showEditModal && <EditPatientModal patient={patient} onClose={() => setShowEditModal(false)} onSave={onUpdatePatient} />}
-      {showDentalChart && <DentalChartModal patient={patient} onClose={() => setShowDentalChart(false)} />}
+      {showVisitForm && (
+        <TreatmentVisitModal
+          patient={patient}
+          onClose={() => setShowVisitForm(false)}
+          onCompleted={onSaveVisit}
+        />
+      )}
+      {showViewModal && (
+        <ViewVisitModal
+          patient={patient}
+          onClose={() => setShowViewModal(false)}
+        />
+      )}
+      {showEditModal && (
+        <EditPatientModal
+          patient={patient}
+          onClose={() => setShowEditModal(false)}
+          onSave={onUpdatePatient}
+        />
+      )}
+      {showDentalChart && (
+        <DentalChartModal
+          patient={patient}
+          onClose={() => setShowDentalChart(false)}
+        />
+      )}
     </div>
   );
 }

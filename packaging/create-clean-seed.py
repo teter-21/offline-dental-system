@@ -34,7 +34,6 @@ REQUIRED_TABLES = {
     "visits",
     "payments",
     "appointments",
-    "queue",
     "dental_chart",
     "auth_sessions",
     "security_rate_limits",
@@ -87,8 +86,8 @@ def main():
 
         # Read only schema definitions.
         # No patient/account rows are retrieved.
-        objects = source.execute("""
-            SELECT type, name, sql
+        original_objects = source.execute("""
+            SELECT type, name, sql, tbl_name
             FROM sqlite_master
             WHERE sql IS NOT NULL
               AND name NOT LIKE 'sqlite_%'
@@ -105,9 +104,19 @@ def main():
               name
         """).fetchall()
 
+        # Keep existing legacy queue tables untouched in the source.
+        # Exclude queue-owned indexes/triggers as well, regardless of name.
+        retired_tables = {"queue", "queue_daily_sequence"}
+        objects = [
+            (object_type, name, sql)
+            for object_type, name, sql, table_name in original_objects
+            if table_name not in retired_tables
+            and name not in retired_tables
+            and not name.startswith("idx_queue_")
+        ]
+
         table_names = {
-            name
-            for object_type, name, _ in objects
+            name for object_type, name, _ in objects
             if object_type == "table"
         }
 

@@ -5,12 +5,12 @@ import api from "../../api";
 import { useAutoRefresh } from "../../utils/useAutoRefresh";
 
 import MonthlyGraph from "../../components/MonthlyGraph";
-import AppointmentCalendar from "../../components/AppointmentCalendar";
+import TreatmentCalendar from "../../components/TreatmentCalendar";
 import PatientManagement from "../../components/PatientTable";
 
 import {
   FaUsers,
-  FaCalendarCheck,
+  FaTooth,
   FaClock,
   FaMoneyBillWave,
   FaArrowRight,
@@ -22,9 +22,9 @@ function Dashboard() {
   const [stats, setStats] = useState({
     totalPatients: 0,
 
-    pendingAppointments: 0,
+    monthTreatments: 0,
 
-    todayAppointments: 0,
+    todayTreatments: 0,
 
     totalRevenue: 0,
   });
@@ -87,7 +87,7 @@ function Dashboard() {
           <p>Total registered patients</p>
         </div>
 
-        {/* PENDING APPOINTMENTS */}
+        {/* TREATMENTS THIS MONTH */}
 
         <div className="dashboard-stat-card">
           <div className="dashboard-stat-top">
@@ -95,28 +95,28 @@ function Dashboard() {
               <FaClock />
             </div>
 
-            <span className="stat-label">Pending</span>
+            <span className="stat-label">This Month</span>
           </div>
 
-          <h2>{loading ? "..." : stats.pendingAppointments}</h2>
+          <h2>{loading ? "..." : stats.monthTreatments}</h2>
 
-          <p>Appointments awaiting approval</p>
+          <p>Recorded treatment visits this month</p>
         </div>
 
-        {/* TODAY'S APPOINTMENTS */}
+        {/* TODAY'S TREATMENTS */}
 
         <div className="dashboard-stat-card">
           <div className="dashboard-stat-top">
             <div className="dashboard-stat-icon green">
-              <FaCalendarCheck />
+              <FaTooth />
             </div>
 
             <span className="stat-label">Today</span>
           </div>
 
-          <h2>{loading ? "..." : stats.todayAppointments}</h2>
+          <h2>{loading ? "..." : stats.todayTreatments}</h2>
 
-          <p>Appointments scheduled today</p>
+          <p>Treatment visits recorded today</p>
         </div>
 
         {/* REVENUE */}
@@ -141,7 +141,7 @@ function Dashboard() {
       <div className="dashboard-grid">
         <MonthlyGraph />
 
-        <AppointmentCalendar />
+        <TreatmentCalendar />
       </div>
 
       {/* PATIENT TABLE */}

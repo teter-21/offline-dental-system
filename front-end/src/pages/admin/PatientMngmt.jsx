@@ -14,7 +14,7 @@ function PatientMngmt() {
     totalPages: 1,
   });
   const [ageFilter, setAgeFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("a-z");
+  const [sortBy, setSortBy] = useState("name-az");
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get("search") || "";
 
@@ -144,6 +144,7 @@ function PatientMngmt() {
         <PatientColumn
           patients={currentPatients}
           onUpdatePatient={handleUpdatePatient}
+          onSaveVisit={loadPatients}
         />
 
         {/* Table footer */}

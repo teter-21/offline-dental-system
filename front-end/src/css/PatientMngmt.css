@@ -369,3 +369,17 @@
     min-width: 1250px;
   }
 }
+
+/* Dedicated record creation action in every patient's Actions column. */
+.patient-container .visit-actions .add-record-btn {
+  background: var(--clinic-green, #267e63) !important;
+  border-color: var(--clinic-green-dark, #17644e) !important;
+  color: #fff !important;
+}
+.patient-container .visit-actions .add-record-btn:hover {
+  background: var(--clinic-green-dark, #17644e) !important;
+}
+.patient-container .table-header,
+.patient-container .table-row {
+  --patient-grid: 60px 88px 145px 295px 120px 55px 125px 90px 120px 355px;
+}

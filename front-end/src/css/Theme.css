@@ -194,7 +194,6 @@ iframe {
 
   .page-header,
 .appointments-header,
-.queue-header,
 .dashboard-header {
     flex-direction: column;
     align-items: stretch;
@@ -202,8 +201,7 @@ iframe {
   }
 
   .page-header button,
-.appointments-header button,
-.queue-header button {
+  .appointments-header button {
     width: 100%;
   }
 

@@ -17,7 +17,6 @@ const visitRoutes = require("./routes/visitRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const appointmentRoutes = require("./routes/appointmentRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
-const queueRoutes = require("./routes/queueRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const dentalChartRoutes = require("./routes/dentalChartRoutes");
 const { getPatientImage, maskImages } = require("./services/privateImages");
@@ -99,7 +98,6 @@ app.use("/", visitRoutes);
 app.use("/", reportRoutes);
 app.use("/", appointmentRoutes);
 app.use("/", dashboardRoutes);
-app.use("/", queueRoutes);
 app.use("/", paymentRoutes);
 app.use("/", dentalChartRoutes);
 

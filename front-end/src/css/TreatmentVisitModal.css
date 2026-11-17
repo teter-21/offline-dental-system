@@ -273,3 +273,6 @@
     width: 100%;
   }
 }
+
+.treatment-form-error { color: #b91c1c; font-size: 0.85rem; margin: 8px 0; }
+.treatment-form-note { color: #526578; font-size: 0.8rem; margin: 5px 0 12px; }

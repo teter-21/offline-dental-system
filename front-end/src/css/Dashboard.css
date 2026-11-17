@@ -1019,3 +1019,36 @@
     gap: 7px;
   }
 }
+
+/* Treatment calendar: keep the existing dashboard calendar layout. */
+.treatment-calendar-card .calendar-status-dot.treatment {
+  background: var(--color-success, #28876b);
+}
+.treatment-calendar-card .calendar-day.has-treatments {
+  background: var(--color-green-soft, #e9f7f0);
+}
+.treatment-calendar-card .calendar-day.has-treatments.selected {
+  box-shadow: inset 0 0 0 2px var(--color-primary, #4f86c6);
+}
+.treatment-calendar-card .calendar-day:disabled {
+  cursor: default;
+}
+.treatment-calendar-card .treatment-day-visits { max-height: 320px; }
+.treatment-calendar-card .treatment-patient-count {
+  font-size: 11px; margin: 0 0 7px; color: var(--color-muted, #526578);
+}
+.treatment-calendar-card .treatment-day-visit {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+.treatment-calendar-card .treatment-day-visit .calendar-appointment-info strong,
+.treatment-calendar-card .treatment-day-visit .calendar-appointment-info span {
+  overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+.treatment-calendar-card .treatment-day-visit .calendar-appointment-info span {
+  font-size: 10px;
+}
+.treatment-calendar-card .treatment-day-visit .treatment-procedure {
+  font-weight: 700; color: var(--color-heading, #24425f);
+}

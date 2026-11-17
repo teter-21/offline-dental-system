@@ -16,7 +16,6 @@ const Dashboard = lazy(() => import("./pages/admin/Dashboard.jsx"));
 const Patients = lazy(() => import("./pages/admin/PatientMngmt.jsx"));
 const AddPatient = lazy(() => import("./pages/admin/AddPatient.jsx"));
 
-const Queue = lazy(() => import("./pages/admin/QueueMngmt.jsx"));
 const Billing = lazy(() => import("./pages/admin/Payment.jsx"));
 const Reports = lazy(() => import("./pages/admin/Report.jsx"));
 const Settings = lazy(() => import("./pages/admin/Settings.jsx"));
@@ -37,7 +36,6 @@ const router = createBrowserRouter([
       { path: "/Dashboard", element: <Dashboard /> },
       { path: "/PatientMngmt", element: <Patients /> },
       { path: "/AddPatient", element: <AddPatient /> },
-      { path: "/Queue", element: <Queue /> },
       { path: "/Payment", element: <Billing /> },
       { path: "/Report", element: <Reports /> },
       { path: "/Settings", element: <Settings /> },

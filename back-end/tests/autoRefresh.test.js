@@ -39,9 +39,7 @@ test('hidden pages skip requests and becoming visible refreshes quietly', async 
 // keep data mounted and must not replace it with a loading/error screen.
 const pages = [
   ['components/PatientTable.jsx','loadRecentPatients'],
-  ['pages/admin/AppointmentMngmt.jsx','loadAppointments'],
   ['pages/admin/Report.jsx','loadReport'],
-  ['pages/admin/QueueMngmt.jsx','fetchQueue'],
   ['pages/admin/Payment.jsx','loadBilling'],
 ];
 for (const [file, name] of pages) test(`${file}: successful/failed background reload preserves content`, async () => {

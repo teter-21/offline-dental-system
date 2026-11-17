@@ -1,5 +1,5 @@
 const db = require("../config/db");
-const bcrypt = require("bcrypt");
+const { hashPassword, verifyPassword } = require("../services/passwordHash");
 const { issueSession } = require("../services/sessionSecurity");
 const { passwordError } = require("../services/passwordPolicy");
 
@@ -12,7 +12,7 @@ exports.login = (req, res) => {
     .toLowerCase();
   const password = String(req.body.password || "");
 
-  if (!emailValue || !password || emailValue.length > 100 || Buffer.byteLength(password, "utf8") > 72) {
+  if (!emailValue || !password || emailValue.length > 100 || typeof req.body.password !== "string") {
     return res.status(400).json({
       message: "Email and password are required.",
     });
@@ -30,7 +30,7 @@ exports.login = (req, res) => {
       }
 
       if (result.length === 0) {
-        await bcrypt.compare(password, DUMMY_LOGIN_HASH);
+        await verifyPassword(password, DUMMY_LOGIN_HASH);
         req.recordLoginFailure?.();
         return res.status(401).json({
           message: "Invalid email or password.",
@@ -40,7 +40,7 @@ exports.login = (req, res) => {
       const user = result[0];
 
       try {
-        const match = await bcrypt.compare(password, user.password);
+        const match = await verifyPassword(password, user.password);
 
         if (!match || user.role !== "admin") {
           req.recordLoginFailure?.();
@@ -152,7 +152,7 @@ exports.updateMyAccount = async (req, res) => {
             });
           }
 
-          const passwordMatches = await bcrypt.compare(
+          const passwordMatches = await verifyPassword(
             currentPassword,
             results[0].password,
           );
@@ -185,7 +185,7 @@ exports.updateMyAccount = async (req, res) => {
             let values;
 
             if (newPassword) {
-              const hashedPassword = await bcrypt.hash(newPassword, 12);
+              const hashedPassword = await hashPassword(newPassword);
               sql = `UPDATE users
                                    SET fullname = ?, email = ?, password = ?
                                    WHERE id = ?`;

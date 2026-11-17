@@ -25,7 +25,7 @@ function Login() {
           res.data.mustChangePassword ? "1" : "0",
         );
         if (res.data.mustChangePassword) {
-          window.alert("Please set a stronger password before continuing.");
+          window.alert("Please update your password to at least 6 characters before continuing.");
           navigate("/Settings");
         } else {
           navigate("/Dashboard");
@@ -53,7 +53,7 @@ function Login() {
             </h1>
 
             <p>
-              Manage clinic patients, appointments, queues, billing, and reports
+              Manage clinic patients, treatments, billing, and reports
               from one secure system.
             </p>
           </div>

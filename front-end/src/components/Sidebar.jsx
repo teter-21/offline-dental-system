@@ -7,8 +7,6 @@ import {
   FaUsers,
   FaCog,
   FaSignOutAlt,
-  FaCalendarAlt,
-  FaListOl,
   FaMoneyBillWave,
   FaChartBar,
 } from "react-icons/fa";
@@ -93,18 +91,6 @@ function Sidebar() {
             </span>
 
             <span>Add Patient</span>
-          </Link>
-        </li>
-
-        {/* Queue */}
-
-        <li className={location.pathname === "/Queue" ? "active" : ""}>
-          <Link to="/Queue">
-            <span className="menu-icon">
-              <FaListOl />
-            </span>
-
-            <span>Queue</span>
           </Link>
         </li>
 

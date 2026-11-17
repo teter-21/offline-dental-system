@@ -60,7 +60,6 @@ async function verifyDatabase(dbPath, imagesPath) {
       "visits",
       "payments",
       "appointments",
-      "queue",
       "dental_chart",
       "auth_sessions",
     ];

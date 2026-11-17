@@ -89,6 +89,11 @@ function Settings() {
       return;
     }
 
+    if (form.newPassword && form.newPassword.length < 6) {
+      window.alert("Password must be at least 6 characters.");
+      return;
+    }
+
     if (form.newPassword && form.newPassword !== form.confirmPassword) {
       window.alert("New password and confirmation do not match.");
       return;
@@ -311,8 +316,8 @@ function Settings() {
             <h3>Change Password</h3>
 
             <p className="account-help">
-              Leave these fields empty if you only want to update your account
-              information.
+              At least 6 characters. No uppercase, number, or special character is required.
+              Leave these fields empty to keep your current password.
             </p>
 
             <div className="account-grid password-grid">
@@ -334,7 +339,8 @@ function Settings() {
                   name="newPassword"
                   value={form.newPassword}
                   onChange={handleChange}
-                  minLength="6"
+                  minLength={6}
+                  placeholder="At least 6 characters"
                   autoComplete="new-password"
                 />
               </label>
@@ -346,7 +352,7 @@ function Settings() {
                   name="confirmPassword"
                   value={form.confirmPassword}
                   onChange={handleChange}
-                  minLength="6"
+                  minLength={6}
                   autoComplete="new-password"
                 />
               </label>

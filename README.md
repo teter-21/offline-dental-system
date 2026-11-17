@@ -1,3 +1,5 @@
+> November 2026 changes: See [IMPLEMENTATION_CHANGES.md](IMPLEMENTATION_CHANGES.md) for treatment calendar, Add Record, visit editing, password policy, and offline testing notes.
+
 # Magno Dental Clinic — Simplified Admin System
 
 This refactored copy retains the **eight requested core modules**. It was modified directly from the supplied `finalcap(testing).zip` source.

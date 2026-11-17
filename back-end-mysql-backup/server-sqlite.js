@@ -32,7 +32,6 @@ initializeSQLite(databasePath);
 // Only import routes already converted to SQLite.
 const authRoutes = require("./routes/authRoutes");
 const patientRoutes = require("./routes/patientRoutes");
-const queueRoutes = require("./routes/queueRoutes");
 const appointmentRoutes = require("./routes/appointmentRoutes");
 const visitRoutes = require("./routes/visitRoutes");
 const dentalChartRoutes = require("./routes/dentalChartRoutes");
@@ -140,11 +139,9 @@ app.use("/uploads", (req, res) => {
 // SQLite-compatible routes.
 app.use("/", authRoutes);
 app.use("/", patientRoutes);
-app.use("/", queueRoutes);
 app.use("/", authRoutes);
 app.use("/", patientRoutes);
 app.use("/", appointmentRoutes);
-app.use("/", queueRoutes);
 app.use("/", visitRoutes);
 app.use("/", dentalChartRoutes);
 app.use("/", paymentRoutes);

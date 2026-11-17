@@ -41,9 +41,9 @@ function PatientColumn({ patients, onSaveVisit, onUpdatePatient }) {
 
       {/* TABLE ROWS */}
       {Array.isArray(patients) && patients.length > 0 ? (
-        patients.map((patient, index) => (
+        patients.map((patient) => (
           <PatientRow
-            key={index}
+            key={patient.id}
             patient={patient}
             onSaveVisit={onSaveVisit}
             onUpdatePatient={onUpdatePatient}

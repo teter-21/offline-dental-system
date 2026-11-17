@@ -93,4 +93,4 @@ back-end/storage/patient-images/
 # SQLite restore staging and recovery
 back-end/data/.restore-*
 back-end/storage/.restore-*
-back-end/recovery/
+back-end/recovery//release/

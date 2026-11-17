@@ -61,7 +61,6 @@ const authRoutes = require("./routes/authRoutes");
 
 const patientRoutes = require("./routes/patientRoutes");
 
-const queueRoutes = require("./routes/queueRoutes");
 
 const appointmentRoutes = require("./routes/appointmentRoutes");
 
@@ -236,7 +235,6 @@ app.use("/", authRoutes);
 
 app.use("/", patientRoutes);
 
-app.use("/", queueRoutes);
 
 app.use("/", appointmentRoutes);
 

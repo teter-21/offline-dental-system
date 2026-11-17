@@ -117,7 +117,6 @@ async function verifyBackup(backupPath) {
       "patients",
       "users",
       "appointments",
-      "queue",
       "visits",
       "payments",
       "dental_chart",
